@@ -1,0 +1,12 @@
+node_modules/
+.npm-cache/
+.env
+.env.*
+!.env.example
+*.log
+server/data.json.tmp
+server/.local/
+coverage/
+playwright-report/
+test-results/
+.repo-review/

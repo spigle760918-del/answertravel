@@ -1,0 +1,462 @@
+{
+  "version": 1,
+  "workspace": {
+    "team": {
+      "name": "体验团队",
+      "description": "云南文旅目的地协作空间"
+    },
+    "brandId": "brand-1",
+    "channels": [
+      {
+        "id": "website",
+        "name": "官网",
+        "status": "已连接",
+        "enabled": true,
+        "endpoint": "answertravel.example.com",
+        "defaultAuthor": "云南文旅内容团队"
+      },
+      {
+        "id": "wechat",
+        "name": "微信公众号",
+        "status": "演示可用",
+        "enabled": true,
+        "endpoint": "云南文旅服务号",
+        "defaultAuthor": "云南文旅内容团队"
+      },
+      {
+        "id": "wordpress",
+        "name": "WordPress",
+        "status": "演示可用",
+        "enabled": true,
+        "endpoint": "https://travel.example.com/wp-json",
+        "defaultAuthor": "云南文旅内容团队"
+      }
+    ]
+  },
+  "brands": [
+    {
+      "id": "brand-1",
+      "name": "南京康辉旅行社",
+      "aliases": [
+        "南京康辉"
+      ],
+      "website": "https://www.kanghui100.com",
+      "language": "zh-CN",
+      "description": "面向游客出发前决策的云南目的地公共文旅服务品牌。",
+      "note": "重点监控南京旅行社、南京导游、南京地接社",
+      "competitors": [
+        "南京澜青旅行社",
+        "江苏苏旅国际旅行社"
+      ],
+      "tracking": true
+    },
+    {
+      "aliases": [
+        "北京珈程"
+      ],
+      "competitors": [],
+      "tracking": true,
+      "language": "zh-CN",
+      "name": "北京珈程国际旅行社",
+      "website": "http://www.jiacheng666.com",
+      "description": "",
+      "note": "",
+      "id": "brand-mtsfohqa-wgtch"
+    }
+  ],
+  "prompts": [
+    {
+      "brandId": "brand-mtsfohqa-wgtch",
+      "id": "prompt-1",
+      "group": "路线规划",
+      "text": "大理三天两夜怎么安排路线和住宿？",
+      "platforms": [
+        "DeepSeek",
+        "豆包",
+        "Kimi",
+        "元宝"
+      ],
+      "status": "active",
+      "createdAt": "2026-09-03"
+    },
+    {
+      "brandId": "brand-mtsfohqa-wgtch",
+      "id": "prompt-2",
+      "group": "出行安全",
+      "text": "雨季去云南旅游安全吗？需要准备什么？",
+      "platforms": [
+        "DeepSeek",
+        "豆包",
+        "Kimi",
+        "元宝"
+      ],
+      "status": "active",
+      "createdAt": "2026-09-03"
+    },
+    {
+      "brandId": "brand-mtsfohqa-wgtch",
+      "id": "prompt-mtr1un49-7jnnd",
+      "group": "路线规划",
+      "text": "云南 5 天游玩路线如何安排更省时间？",
+      "platforms": [
+        "DeepSeek",
+        "豆包",
+        "Kimi",
+        "元宝",
+        "通义千问"
+      ],
+      "rank": 0,
+      "exposure": 0,
+      "delta": 0,
+      "status": "active",
+      "createdAt": "2026-09-07"
+    },
+    {
+      "brandId": "brand-mtsfohqa-wgtch",
+      "id": "prompt-mtr1un4b-no11r",
+      "group": "旅行体验",
+      "text": "第一次去云南，哪些景点最值得安排？",
+      "platforms": [
+        "DeepSeek",
+        "豆包",
+        "Kimi",
+        "元宝",
+        "通义千问"
+      ],
+      "rank": 0,
+      "exposure": 0,
+      "delta": 0,
+      "status": "active",
+      "createdAt": "2026-09-07"
+    },
+    {
+      "brandId": "brand-mtsfohqa-wgtch",
+      "id": "prompt-mtr1un4b-yqp5t",
+      "group": "旅行体验",
+      "text": "带孩子去云南适合自由行还是跟团？",
+      "platforms": [
+        "DeepSeek",
+        "豆包",
+        "Kimi",
+        "元宝",
+        "通义千问"
+      ],
+      "rank": 0,
+      "exposure": 0,
+      "delta": 0,
+      "status": "active",
+      "createdAt": "2026-09-07"
+    }
+  ],
+  "records": [
+    {
+      "brandId": "brand-mtsfohqa-wgtch",
+      "id": "record-mtr1un4b-i6ajp",
+      "promptId": "prompt-mtr1un49-7jnnd",
+      "question": "云南 5 天游玩路线如何安排更省时间？",
+      "group": "路线规划",
+      "platform": "DeepSeek",
+      "mentioned": true,
+      "score": 62,
+      "date": "2026-09-07",
+      "time": "刚刚",
+      "status": "completed",
+      "answer": "任务已完成，模型返回了新的目的地推荐结果。",
+      "sources": []
+    },
+    {
+      "brandId": "brand-mtsfohqa-wgtch",
+      "id": "record-mtr1un4b-9mqtz",
+      "promptId": "prompt-mtr1un49-7jnnd",
+      "question": "云南 5 天游玩路线如何安排更省时间？",
+      "group": "路线规划",
+      "platform": "豆包",
+      "mentioned": true,
+      "score": 58,
+      "date": "2026-09-07",
+      "time": "刚刚",
+      "status": "completed",
+      "answer": "任务已完成，模型返回了新的目的地推荐结果。",
+      "sources": []
+    },
+    {
+      "brandId": "brand-mtsfohqa-wgtch",
+      "id": "record-mtr1un4b-5hhdk",
+      "promptId": "prompt-mtr1un49-7jnnd",
+      "question": "云南 5 天游玩路线如何安排更省时间？",
+      "group": "路线规划",
+      "platform": "Kimi",
+      "mentioned": false,
+      "score": 34,
+      "date": "2026-09-07",
+      "time": "刚刚",
+      "status": "completed",
+      "answer": "任务已完成，当前回答未提及目标目的地。",
+      "sources": []
+    },
+    {
+      "brandId": "brand-mtsfohqa-wgtch",
+      "id": "record-mtr1un4b-mhlun",
+      "promptId": "prompt-mtr1un49-7jnnd",
+      "question": "云南 5 天游玩路线如何安排更省时间？",
+      "group": "路线规划",
+      "platform": "元宝",
+      "mentioned": true,
+      "score": 50,
+      "date": "2026-09-07",
+      "time": "刚刚",
+      "status": "completed",
+      "answer": "任务已完成，模型返回了新的目的地推荐结果。",
+      "sources": []
+    },
+    {
+      "brandId": "brand-mtsfohqa-wgtch",
+      "id": "record-mtr1un4b-5ebdy",
+      "promptId": "prompt-mtr1un49-7jnnd",
+      "question": "云南 5 天游玩路线如何安排更省时间？",
+      "group": "路线规划",
+      "platform": "通义千问",
+      "mentioned": true,
+      "score": 46,
+      "date": "2026-09-07",
+      "time": "刚刚",
+      "status": "completed",
+      "answer": "任务已完成，模型返回了新的目的地推荐结果。",
+      "sources": []
+    },
+    {
+      "brandId": "brand-mtsfohqa-wgtch",
+      "id": "record-mtr1un4b-5ys4s",
+      "promptId": "prompt-mtr1un4b-no11r",
+      "question": "第一次去云南，哪些景点最值得安排？",
+      "group": "旅行体验",
+      "platform": "DeepSeek",
+      "mentioned": true,
+      "score": 62,
+      "date": "2026-09-07",
+      "time": "刚刚",
+      "status": "completed",
+      "answer": "任务已完成，模型返回了新的目的地推荐结果。",
+      "sources": []
+    },
+    {
+      "brandId": "brand-mtsfohqa-wgtch",
+      "id": "record-mtr1un4b-ajg5u",
+      "promptId": "prompt-mtr1un4b-no11r",
+      "question": "第一次去云南，哪些景点最值得安排？",
+      "group": "旅行体验",
+      "platform": "豆包",
+      "mentioned": true,
+      "score": 58,
+      "date": "2026-09-07",
+      "time": "刚刚",
+      "status": "completed",
+      "answer": "任务已完成，模型返回了新的目的地推荐结果。",
+      "sources": []
+    },
+    {
+      "brandId": "brand-mtsfohqa-wgtch",
+      "id": "record-mtr1un4b-e3yr7",
+      "promptId": "prompt-mtr1un4b-no11r",
+      "question": "第一次去云南，哪些景点最值得安排？",
+      "group": "旅行体验",
+      "platform": "Kimi",
+      "mentioned": false,
+      "score": 34,
+      "date": "2026-09-07",
+      "time": "刚刚",
+      "status": "completed",
+      "answer": "任务已完成，当前回答未提及目标目的地。",
+      "sources": []
+    },
+    {
+      "brandId": "brand-mtsfohqa-wgtch",
+      "id": "record-mtr1un4b-93axu",
+      "promptId": "prompt-mtr1un4b-no11r",
+      "question": "第一次去云南，哪些景点最值得安排？",
+      "group": "旅行体验",
+      "platform": "元宝",
+      "mentioned": true,
+      "score": 50,
+      "date": "2026-09-07",
+      "time": "刚刚",
+      "status": "completed",
+      "answer": "任务已完成，模型返回了新的目的地推荐结果。",
+      "sources": []
+    },
+    {
+      "brandId": "brand-mtsfohqa-wgtch",
+      "id": "record-mtr1un4b-tenmv",
+      "promptId": "prompt-mtr1un4b-no11r",
+      "question": "第一次去云南，哪些景点最值得安排？",
+      "group": "旅行体验",
+      "platform": "通义千问",
+      "mentioned": true,
+      "score": 46,
+      "date": "2026-09-07",
+      "time": "刚刚",
+      "status": "completed",
+      "answer": "任务已完成，模型返回了新的目的地推荐结果。",
+      "sources": []
+    },
+    {
+      "brandId": "brand-mtsfohqa-wgtch",
+      "id": "record-mtr1un4b-w6wtg",
+      "promptId": "prompt-mtr1un4b-yqp5t",
+      "question": "带孩子去云南适合自由行还是跟团？",
+      "group": "旅行体验",
+      "platform": "DeepSeek",
+      "mentioned": true,
+      "score": 62,
+      "date": "2026-09-07",
+      "time": "刚刚",
+      "status": "completed",
+      "answer": "任务已完成，模型返回了新的目的地推荐结果。",
+      "sources": []
+    },
+    {
+      "brandId": "brand-mtsfohqa-wgtch",
+      "id": "record-mtr1un4b-dgx60",
+      "promptId": "prompt-mtr1un4b-yqp5t",
+      "question": "带孩子去云南适合自由行还是跟团？",
+      "group": "旅行体验",
+      "platform": "豆包",
+      "mentioned": true,
+      "score": 58,
+      "date": "2026-09-07",
+      "time": "刚刚",
+      "status": "completed",
+      "answer": "任务已完成，模型返回了新的目的地推荐结果。",
+      "sources": []
+    },
+    {
+      "brandId": "brand-mtsfohqa-wgtch",
+      "id": "record-mtr1un4b-7wf1r",
+      "promptId": "prompt-mtr1un4b-yqp5t",
+      "question": "带孩子去云南适合自由行还是跟团？",
+      "group": "旅行体验",
+      "platform": "Kimi",
+      "mentioned": false,
+      "score": 34,
+      "date": "2026-09-07",
+      "time": "刚刚",
+      "status": "completed",
+      "answer": "任务已完成，当前回答未提及目标目的地。",
+      "sources": []
+    },
+    {
+      "brandId": "brand-mtsfohqa-wgtch",
+      "id": "record-mtr1un4b-uoi0o",
+      "promptId": "prompt-mtr1un4b-yqp5t",
+      "question": "带孩子去云南适合自由行还是跟团？",
+      "group": "旅行体验",
+      "platform": "元宝",
+      "mentioned": true,
+      "score": 50,
+      "date": "2026-09-07",
+      "time": "刚刚",
+      "status": "completed",
+      "answer": "任务已完成，模型返回了新的目的地推荐结果。",
+      "sources": []
+    },
+    {
+      "brandId": "brand-mtsfohqa-wgtch",
+      "id": "record-mtr1un4b-p5lng",
+      "promptId": "prompt-mtr1un4b-yqp5t",
+      "question": "带孩子去云南适合自由行还是跟团？",
+      "group": "旅行体验",
+      "platform": "通义千问",
+      "mentioned": true,
+      "score": 46,
+      "date": "2026-09-07",
+      "time": "刚刚",
+      "status": "completed",
+      "answer": "任务已完成，模型返回了新的目的地推荐结果。",
+      "sources": []
+    }
+  ],
+  "assets": [],
+  "articles": [],
+  "tasks": [
+    {
+      "brandId": "brand-mtsfohqa-wgtch",
+      "id": "task-mtr1un4b-434ye",
+      "type": "回答采集",
+      "promptId": "prompt-mtr1un4b-yqp5t",
+      "label": "旅行体验 · 带孩子去云南适合自由行还是跟团？",
+      "platform": "全平台",
+      "status": "completed",
+      "progress": 100,
+      "createdAt": "2026/9/7 17:39:53",
+      "error": "",
+      "completedAt": "2026-09-07T09:41:32.766Z"
+    },
+    {
+      "brandId": "brand-mtsfohqa-wgtch",
+      "id": "task-mtr1un4b-5msvp",
+      "type": "回答采集",
+      "promptId": "prompt-mtr1un4b-no11r",
+      "label": "旅行体验 · 第一次去云南，哪些景点最值得安排？",
+      "platform": "全平台",
+      "status": "completed",
+      "progress": 100,
+      "createdAt": "2026/9/7 17:39:53",
+      "error": "",
+      "completedAt": "2026-09-07T09:41:32.766Z"
+    },
+    {
+      "brandId": "brand-mtsfohqa-wgtch",
+      "id": "task-mtr1un49-1clg2",
+      "type": "回答采集",
+      "promptId": "prompt-mtr1un49-7jnnd",
+      "label": "路线规划 · 云南 5 天游玩路线如何安排更省时间？",
+      "platform": "全平台",
+      "status": "completed",
+      "progress": 100,
+      "createdAt": "2026/9/7 17:39:53",
+      "error": "",
+      "completedAt": "2026-09-07T09:41:32.766Z"
+    }
+  ],
+  "members": [
+    {
+      "id": "member-1",
+      "name": "Admin",
+      "email": "admin@company.com",
+      "role": "团队管理员",
+      "scope": "全部品牌",
+      "status": "在线"
+    }
+  ],
+  "meta": {
+    "updatedAt": "2026-09-09T01:43:33.577Z"
+  },
+  "users": [],
+  "refreshTokens": [],
+  "auditLogs": [],
+  "wizardDraft": {
+    "team": {
+      "name": "",
+      "description": ""
+    },
+    "brand": {
+      "name": "",
+      "aliases": [],
+      "website": "",
+      "language": "zh-CN",
+      "description": "",
+      "note": ""
+    },
+    "promptSelected": [
+      true,
+      true,
+      true,
+      false,
+      false
+    ],
+    "customPrompts": [],
+    "competitors": [],
+    "customCompetitors": []
+  },
+  "setupCompleted": true
+}

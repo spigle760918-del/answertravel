@@ -1,0 +1,33 @@
+{
+  "name": "answertravel-local-api",
+  "version": "0.2.0",
+  "private": true,
+  "description": "AnswerTravel API production-transition service",
+  "main": "index.js",
+  "dependencies": {
+    "pg": "^8.13.1"
+  },
+  "scripts": {
+    "start": "node index.js",
+    "check": "node --check index.js",
+    "check:collection": "node --check collection-policy.js && node --check collection-scheduler.js && node --check collection-runner.js && node --check providers/deepseek-provider.js && node --check ../collection-status-ui.js && node --check ../collection-schedule-ui.js",
+    "check:all": "node --check index.js && node --check config.js && node --check security.js && node --check db.js && node --check postgres-store.js && node --check relational-store.js && node --check repositories.js && node --check answer-evaluator.js && node --check collection-runner.js && node --check source-evidence-service.js && node --check providers/index.js && node --check providers/deepseek-provider.js && node --check migrate.js && node --check migrate-json.js && node --check local-postgres.js && node --check local-stack.js && node --check backup-local.js && node --check restore-backup.js && node --check test-local-postgres.js && node --check validate-migrations.js && node --check validate-openapi.js && node --check validate-deployment.js && node --check validate-frontend.js && node --check test-workspace-data.js && node --check test-brand-intelligence.js && node --check test-frontend-auth.js && node --check test-auth-stability.js && node --check test-api.js && node --check test-production-auth.js && node --check test-repositories.js && node --check test-providers.js && node --check test-postgres-api.js && node --check test-source-evidence.js && node --check ../brand-intelligence.js && node --check ../workspace-data.js && node --check ../api-client.js && node --check ../auth-ui.js && node --check ../prompt-groups-ui.js && node --check ../collection-status-ui.js && node --check ../collection-actions-ui.js && node --check ../member-permissions-ui.js && node --check ../dev-server.js",
+    "check:migrations": "node validate-migrations.js",
+    "check:openapi": "node validate-openapi.js",
+    "check:deployment": "node validate-deployment.js",
+    "check:frontend": "node validate-frontend.js",
+    "test": "node test-repositories.js && node test-providers.js && node test-source-evidence.js && node test-workspace-data.js && node test-brand-intelligence.js && node test-frontend-auth.js && node test-auth-stability.js && node test-api.js && node test-production-auth.js",
+    "test:frontend-auth": "node test-frontend-auth.js && node test-auth-stability.js",
+    "test:auth": "node test-production-auth.js",
+    "test:postgres": "node test-postgres-api.js",
+    "test:postgres:local": "node test-local-postgres.js",
+    "local:start": "node local-stack.js",
+    "local:backup": "node backup-local.js",
+    "local:restore": "node restore-backup.js",
+    "migrate": "node migrate.js",
+    "migrate:json": "node migrate-json.js"
+  },
+  "devDependencies": {
+    "embedded-postgres": "^16.14.0-beta.17"
+  }
+}

@@ -1,0 +1,60 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: answertravel
+      POSTGRES_USER: answertravel
+      POSTGRES_PASSWORD: ${ANSWERTRAVEL_DB_PASSWORD:?set ANSWERTRAVEL_DB_PASSWORD}
+    volumes:
+      - answertravel_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U answertravel -d answertravel"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [answertravel]
+
+  api:
+    build:
+      context: ./server
+    restart: unless-stopped
+    command: ["sh", "-c", "npm run migrate && node index.js"]
+    environment:
+      NODE_ENV: production
+      ANSWERTRAVEL_API_HOST: 0.0.0.0
+      ANSWERTRAVEL_API_PORT: 4174
+      ANSWERTRAVEL_STORAGE: postgres
+      ANSWERTRAVEL_DEMO_AUTH: "false"
+      ANSWERTRAVEL_TRUST_PROXY: "true"
+      ANSWERTRAVEL_ALLOWED_ORIGINS: ${ANSWERTRAVEL_PUBLIC_ORIGIN:?set ANSWERTRAVEL_PUBLIC_ORIGIN}
+      ANSWERTRAVEL_BOOTSTRAP_ADMIN_EMAIL: ${ANSWERTRAVEL_BOOTSTRAP_ADMIN_EMAIL:?set ANSWERTRAVEL_BOOTSTRAP_ADMIN_EMAIL}
+      ANSWERTRAVEL_BOOTSTRAP_ADMIN_PASSWORD: ${ANSWERTRAVEL_BOOTSTRAP_ADMIN_PASSWORD:?set ANSWERTRAVEL_BOOTSTRAP_ADMIN_PASSWORD}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      DEEPSEEK_API_ENDPOINT: ${DEEPSEEK_API_ENDPOINT:-https://api.deepseek.com/chat/completions}
+      DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-deepseek-chat}
+      ANSWERTRAVEL_PROVIDER_TIMEOUT_MS: ${ANSWERTRAVEL_PROVIDER_TIMEOUT_MS:-45000}
+      DATABASE_URL: postgresql://answertravel:${ANSWERTRAVEL_DB_PASSWORD}@postgres:5432/answertravel
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [answertravel]
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    restart: unless-stopped
+    ports:
+      - "${ANSWERTRAVEL_WEB_PORT:-8080}:8080"
+    depends_on:
+      api:
+        condition: service_healthy
+    networks: [answertravel]
+
+volumes:
+  answertravel_postgres:
+
+networks:
+  answertravel:
+    driver: bridge

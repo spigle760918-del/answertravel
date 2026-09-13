@@ -1,0 +1,40 @@
+{
+  "name": "answertravel-v2",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "check:runtime": "node scripts/check-runtime.mjs",
+    "check:types": "tsc --noEmit",
+    "check": "npm run check:runtime && npm run check:types && vitest run",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check:integration": "npm run check:runtime && npm run check:types && tsx scripts/check-integration.ts",
+    "verify:local": "tsx scripts/verify-local.ts",
+    "db:provision-test": "tsx scripts/provision-test-database.ts",
+    "db:migrate": "tsx scripts/migrate.ts",
+    "dev:api": "tsx watch src/main.ts",
+    "dev:worker": "tsx watch src/worker.ts",
+    "start:api": "tsx src/main.ts",
+    "start:worker": "tsx src/worker.ts"
+  },
+  "dependencies": {
+    "bullmq": "6.3.4",
+    "fastify": "5.12.4",
+    "ioredis": "6.0.0",
+    "pg": "8.23.0",
+    "zod": "4.6.4"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.4",
+    "@types/pg": "8.23.1",
+    "@vitest/coverage-v8": "4.1.11",
+    "embedded-postgres": "16.14.0-beta.17",
+    "tsx": "4.23.13",
+    "typescript": "7.0.2",
+    "vitest": "4.1.11"
+  }
+}

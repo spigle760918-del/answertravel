@@ -1,0 +1,42 @@
+# Disposable integration test stack: no host ports, external volumes or production secrets.
+services:
+  postgres:
+    image: postgres:16.14
+    environment:
+      POSTGRES_USER: answertravel_v2_admin
+      POSTGRES_PASSWORD: fixture-admin-password
+      POSTGRES_DB: answertravel_v2_test
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U answertravel_v2_admin -d answertravel_v2_test"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+    mem_limit: 384m
+    cpus: 0.5
+  redis:
+    image: redis:7.2.16-alpine
+    command: ["redis-server", "--appendonly", "yes", "--appendfsync", "always"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+    mem_limit: 128m
+    cpus: 0.25
+  verifier:
+    build:
+      context: .
+      dockerfile: Dockerfile.verify
+    environment:
+      NODE_ENV: test
+      TEST_ADMIN_DATABASE_URL: postgresql://answertravel_v2_admin:fixture-admin-password@postgres:5432/answertravel_v2_test
+      TEST_DATABASE_URL: postgresql://answertravel_v2_app_test:fixture-app-password@postgres:5432/answertravel_v2_test
+      TEST_APP_PASSWORD: fixture-app-password
+      TEST_REDIS_URL: redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    mem_limit: 768m
+    cpus: 1

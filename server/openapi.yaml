@@ -1,0 +1,681 @@
+openapi: 3.0.3
+info:
+  title: AnswerTravel API
+  version: 1.0.0
+  description: AnswerTravel 文旅目的地 AI 推荐监控 API。生产环境必须使用 Bearer access token。
+servers:
+  - url: https://api.example.com/api/v1
+  - url: http://127.0.0.1:4174/api/v1
+security:
+  - bearerAuth: []
+tags:
+  - name: Auth
+  - name: Workspace
+  - name: Brands
+  - name: Prompts
+  - name: Records
+  - name: Assets
+  - name: Members
+  - name: Articles
+  - name: Tasks
+  - name: Providers
+  - name: Audit
+paths:
+  /health:
+    get:
+      tags: [Workspace]
+      security: []
+      responses:
+        '200': { description: 服务存活 }
+  /ready:
+    get:
+      tags: [Workspace]
+      security: []
+      responses:
+        '200': { description: 可接收流量 }
+        '503': { description: 生产配置未完成 }
+  /providers:
+    get:
+      tags: [Providers]
+      summary: 查询真实大模型平台配置状态
+      responses:
+        '200': { description: 平台、模型与是否已配置；不返回任何密钥 }
+  /collection/status:
+    get:
+      tags: [Providers]
+      summary: 查询采集平台、月度配额与定时调度状态
+      responses:
+        '200': { description: 返回当前账号可访问品牌的采集状态 }
+  /brand-intelligence:
+    get:
+      tags: [Brands]
+      summary: 基于已完成回答生成品牌与竞品优化诊断
+      parameters:
+        - { name: brandId, in: query, schema: { type: string } }
+      responses:
+        '200': { description: 返回提及率、排名、情感、信源、内容结构、服务承诺及竞品差距 }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /audit-logs:
+    get:
+      tags: [Audit]
+      summary: 查询工作空间审计日志，仅团队管理员可用
+      parameters:
+        - { name: resourceType, in: query, schema: { type: string } }
+        - { name: action, in: query, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 200, default: 50 } }
+      responses:
+        '200': { description: 审计日志列表 }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /auth/register:
+    post:
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201': { description: 注册成功 }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '403': { description: 生产环境需要有效邀请 }
+  /auth/login:
+    post:
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200': { description: 登录成功 }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { description: 登录频率受限 }
+  /auth/local-admin:
+    get:
+      tags: [Auth]
+      summary: 查询仅限本机开发环境的管理员快捷登录是否可用
+      security: []
+      responses:
+        '200': { description: 返回本机快捷登录可用状态 }
+    post:
+      tags: [Auth]
+      summary: 仅限本机开发环境签发管理员会话
+      security: []
+      responses:
+        '200': { description: 登录成功 }
+        '404': { description: 当前环境未启用该入口 }
+        '503': { description: 本地管理员尚未初始化 }
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      security: []
+      responses:
+        '200': { description: 刷新成功 }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /auth/logout:
+    post:
+      tags: [Auth]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refreshToken: { type: string }
+      responses:
+        '200': { description: 会话已退出 }
+  /auth/me:
+    get:
+      tags: [Auth]
+      responses:
+        '200': { description: 当前用户 }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /invitations/{token}:
+    get:
+      tags: [Workspace]
+      security: []
+      parameters:
+        - { name: token, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: 邀请信息 }
+        '404': { description: 邀请不存在 }
+        '410': { description: 邀请已过期 }
+  /invitations/{token}/accept:
+    post:
+      tags: [Workspace]
+      deprecated: true
+      summary: 已弃用，请使用带 inviteToken 的注册接口
+      security: []
+      parameters:
+        - { name: token, in: path, required: true, schema: { type: string } }
+      responses:
+        '400': { description: 必须通过注册接口设置密码并接受邀请 }
+        '404': { description: 邀请不存在 }
+        '410': { description: 邀请已过期 }
+  /snapshot:
+    get:
+      tags: [Workspace]
+      responses:
+        '200': { description: 脱敏后的工作空间快照 }
+    put:
+      tags: [Workspace]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '200': { description: 保存成功 }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /brands:
+    get:
+      tags: [Brands]
+      responses:
+        '200': { description: 品牌列表 }
+    post:
+      tags: [Brands]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BrandInput' }
+      responses:
+        '201': { description: 创建成功 }
+  /brands/{brandId}:
+    parameters:
+      - { name: brandId, in: path, required: true, schema: { type: string } }
+    get:
+      tags: [Brands]
+      responses:
+        '200': { description: 品牌详情 }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { description: 品牌不存在 }
+    patch:
+      tags: [Brands]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BrandInput' }
+      responses:
+        '200': { description: 更新成功 }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    delete:
+      tags: [Brands]
+      responses:
+        '200': { description: 删除成功 }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { description: 至少保留一个品牌 }
+  /brands/{brandId}/competitors:
+    put:
+      tags: [Brands]
+      parameters:
+        - { name: brandId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [competitors]
+              properties:
+                competitors: { type: array, maxItems: 5, items: { type: string } }
+      responses:
+        '200': { description: 竞品已更新 }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /prompt-groups:
+    get:
+      tags: [Prompts]
+      parameters:
+        - { name: brandId, in: query, schema: { type: string } }
+      responses:
+        '200': { description: 主题分组列表 }
+    post:
+      tags: [Prompts]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                id: { type: string }
+                brandId: { type: string }
+                name: { type: string, maxLength: 120 }
+                sortOrder: { type: integer }
+      responses:
+        '201': { description: 主题分组创建成功 }
+        '409': { description: 主题分组已存在 }
+  /prompt-groups/{groupId}:
+    parameters:
+      - { name: groupId, in: path, required: true, schema: { type: string } }
+    get:
+      tags: [Prompts]
+      responses:
+        '200': { description: 主题分组详情 }
+        '404': { description: 主题分组不存在 }
+    patch:
+      tags: [Prompts]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, maxLength: 120 }
+                sortOrder: { type: integer }
+      responses:
+        '200': { description: 主题分组已更新 }
+        '409': { description: 主题分组已存在 }
+    delete:
+      tags: [Prompts]
+      responses:
+        '200': { description: 主题分组已删除 }
+        '409': { description: 非空主题不能删除 }
+
+  /prompts:
+    get:
+      tags: [Prompts]
+      responses:
+        '200': { description: 提问列表 }
+    post:
+      tags: [Prompts]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PromptInput' }
+      responses:
+        '201': { description: 创建成功并生成采集任务 }
+  /prompts/{promptId}:
+    parameters:
+      - { name: promptId, in: path, required: true, schema: { type: string } }
+    get:
+      tags: [Prompts]
+      responses:
+        '200': { description: 提问详情 }
+        '404': { description: 提问不存在 }
+    patch:
+      tags: [Prompts]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PromptInput' }
+      responses:
+        '200': { description: 更新成功 }
+    delete:
+      tags: [Prompts]
+      responses:
+        '200': { description: 删除成功 }
+  /records:
+    get:
+      tags: [Records]
+      parameters:
+        - { name: platform, in: query, schema: { type: string } }
+        - { name: group, in: query, schema: { type: string } }
+        - { name: status, in: query, schema: { type: string } }
+        - { name: mentioned, in: query, schema: { type: string, enum: [true, false, all] } }
+        - { name: sourceType, in: query, schema: { type: string, enum: [model_citation, embedded_link, retrieval_candidate, manual_or_owned] } }
+        - { name: verificationStatus, in: query, schema: { type: string, enum: [unverified, fetched, failed] } }
+        - { name: search, in: query, schema: { type: string } }
+        - { name: from, in: query, schema: { type: string, format: date } }
+        - { name: to, in: query, schema: { type: string, format: date } }
+      responses:
+        '200': { description: 筛选后的回答记录 }
+  /sources:
+    get:
+      tags: [Records]
+      summary: 查询回答关联的结构化信源证据
+      parameters:
+        - { name: brandId, in: query, schema: { type: string } }
+        - { name: sourceType, in: query, schema: { type: string, enum: [model_citation, embedded_link, retrieval_candidate, manual_or_owned] } }
+        - { name: verificationStatus, in: query, schema: { type: string, enum: [unverified, fetched, failed] } }
+        - { name: domain, in: query, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 500, default: 100 } }
+      responses:
+        '200': { description: 仅返回当前账号可见品牌的信源证据 }
+  /sources/refresh:
+    post:
+      tags: [Records]
+      summary: 重新抓取回答中的公开信源并补充检索候选
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [recordId]
+              properties:
+                recordId: { type: string }
+                discover: { type: boolean, default: true }
+                fetchLimit: { type: integer, minimum: 1, maximum: 12, default: 5 }
+      responses:
+        '200': { description: 信源证据已刷新 }
+        '404': { description: 回答记录不存在 }
+        '403': { description: 无品牌权限 }
+  /articles:
+    get:
+      tags: [Articles]
+      responses:
+        '200': { description: 文章列表 }
+    post:
+      tags: [Articles]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ArticleInput' }
+      responses:
+        '201': { description: 创建成功 }
+  /articles/{articleId}:
+    parameters:
+      - { name: articleId, in: path, required: true, schema: { type: string } }
+    get:
+      tags: [Articles]
+      responses:
+        '200': { description: 文章详情 }
+    patch:
+      tags: [Articles]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ArticleInput' }
+      responses:
+        '200': { description: 更新成功 }
+    delete:
+      tags: [Articles]
+      responses:
+        '200': { description: 删除成功 }
+  /articles/{articleId}/duplicate:
+    post:
+      tags: [Articles]
+      parameters:
+        - { name: articleId, in: path, required: true, schema: { type: string } }
+      responses:
+        '201': { description: 已创建副本 }
+  /articles/{articleId}/review:
+    post:
+      tags: [Articles]
+      parameters:
+        - { name: articleId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReviewInput' }
+      responses:
+        '200': { description: 审核完成 }
+  /articles/{articleId}/publish:
+    post:
+      tags: [Articles]
+      parameters:
+        - { name: articleId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                channel: { type: string }
+      responses:
+        '202': { description: 已创建发布任务，或复用同一文章正在执行的发布任务 }
+        '409': { description: 发布渠道不可用、发布状态异常或文章已经发布 }
+  /articles/{articleId}/index:
+    post:
+      tags: [Articles]
+      parameters:
+        - { name: articleId, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: 收录状态已更新 }
+
+  /assets:
+    get:
+      tags: [Assets]
+      responses:
+        '200': { description: 素材列表 }
+    post:
+      tags: [Assets]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AssetInput' }
+      responses:
+        '201': { description: 创建成功 }
+  /assets/{assetId}:
+    parameters:
+      - { name: assetId, in: path, required: true, schema: { type: string } }
+    patch:
+      tags: [Assets]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AssetInput' }
+      responses:
+        '200': { description: 更新成功 }
+    delete:
+      tags: [Assets]
+      responses:
+        '200': { description: 删除成功 }
+
+  /members:
+    get:
+      tags: [Members]
+      responses:
+        '200': { description: 团队成员列表 }
+    post:
+      tags: [Members]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MemberInput' }
+      responses:
+        '201': { description: 邀请已创建 }
+  /members/{memberId}:
+    parameters:
+      - { name: memberId, in: path, required: true, schema: { type: string } }
+    patch:
+      tags: [Members]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MemberPatch' }
+      responses:
+        '200': { description: 成员已更新 }
+    delete:
+      tags: [Members]
+      responses:
+        '200': { description: 成员已移除 }
+  /members/{memberId}/resend-invitation:
+    parameters:
+      - { name: memberId, in: path, required: true, schema: { type: string } }
+    post:
+      tags: [Members]
+      summary: 为尚未注册的成员重新生成邀请链接
+      responses:
+        '200': { description: 新邀请链接已生成，旧链接立即失效 }
+        '409': { description: 成员已经加入团队 }
+
+  /workspace:
+    get:
+      tags: [Workspace]
+      responses:
+        '200': { description: 工作空间详情 }
+    patch:
+      tags: [Workspace]
+      summary: 增量更新设置向导与当前品牌
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                brandId: { type: string }
+                setupCompleted: { type: boolean }
+                wizardDraft: { type: object, additionalProperties: true }
+      responses:
+        '200': { description: 工作空间设置已更新 }
+  /workspace/team:
+    patch:
+      tags: [Workspace]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string, maxLength: 120 }
+                description: { type: string }
+      responses:
+        '200': { description: 团队信息已更新 }
+  /workspace/channels/{channelId}:
+    patch:
+      tags: [Workspace]
+      parameters:
+        - { name: channelId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status: { type: string }
+                endpoint: { type: string }
+                defaultAuthor: { type: string }
+      responses:
+        '200': { description: 发布渠道已更新 }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /tasks:
+    get:
+      tags: [Tasks]
+      responses:
+        '200': { description: 任务列表 }
+  /tasks/{taskId}:
+    get:
+      tags: [Tasks]
+      parameters:
+        - { name: taskId, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: 任务详情 }
+  /tasks/{taskId}/{action}:
+    post:
+      tags: [Tasks]
+      parameters:
+        - { name: taskId, in: path, required: true, schema: { type: string } }
+        - { name: action, in: path, required: true, schema: { type: string, enum: [cancel, retry] } }
+      responses:
+        '200': { description: 任务状态已更新 }
+  /records/{recordId}/rerun:
+    post:
+      tags: [Records]
+      parameters:
+        - { name: recordId, in: path, required: true, schema: { type: string } }
+      responses:
+        '202': { description: 已创建重新采集任务 }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque
+  responses:
+    BadRequest:
+      description: 请求参数错误
+    Unauthorized:
+      description: 未登录或会话失效
+    Forbidden:
+      description: 没有当前资源权限
+  schemas:
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, minLength: 10, format: password }
+    RegisterRequest:
+      allOf:
+        - $ref: '#/components/schemas/LoginRequest'
+        - type: object
+          required: [name]
+          properties:
+            name: { type: string, maxLength: 80 }
+            inviteToken: { type: string }
+    BrandInput:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, maxLength: 160 }
+        aliases: { type: array, items: { type: string } }
+        website: { type: string, format: uri }
+        language: { type: string, default: zh-CN }
+        description: { type: string }
+    PromptInput:
+      type: object
+      required: [text]
+      properties:
+        brandId: { type: string, description: 目标品牌；省略时使用当前可访问品牌 }
+        text: { type: string, minLength: 1 }
+        group: { type: string }
+        platforms: { type: array, items: { type: string } }
+    ArticleInput:
+      type: object
+      required: [title]
+      properties:
+        brandId: { type: string, description: 目标品牌；省略时使用当前可访问品牌 }
+        title: { type: string, maxLength: 240 }
+        topic: { type: string }
+        body: { type: string }
+        slug: { type: string }
+    AssetInput:
+      type: object
+      required: [title]
+      properties:
+        brandId: { type: string, description: 目标品牌；省略时使用当前可访问品牌 }
+        title: { type: string, maxLength: 240 }
+        type: { type: string }
+        source: { type: string }
+        sourceUrl: { type: string, format: uri }
+        content: { type: string }
+        status: { type: string }
+        validFrom: { type: string, format: date }
+        validUntil: { type: string, format: date }
+    MemberInput:
+      type: object
+      required: [email]
+      properties:
+        name: { type: string, maxLength: 80 }
+        email: { type: string, format: email }
+        role: { type: string, enum: [团队管理员, 品牌管理员, 品牌编辑者, 品牌成员（只读）] }
+        scope:
+          oneOf:
+            - { type: string }
+            - { type: array, items: { type: string } }
+          description: 品牌 ID、品牌名称或品牌 ID 数组
+    MemberPatch:
+      allOf:
+        - $ref: '#/components/schemas/MemberInput'
+        - type: object
+          properties:
+            status: { type: string, enum: [正常, 待接受, 暂停] }
+    ReviewInput:
+      type: object
+      properties:
+        factSources: { type: boolean }
+        factUpdated: { type: boolean }
+        factAuthor: { type: boolean }
+        factContact: { type: boolean }
+        factPricing: { type: boolean }

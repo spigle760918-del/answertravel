@@ -9,7 +9,7 @@ on:
     paths:
       - "v2/**"
       - ".github/workflows/v2-ci.yml"
-
+  workflow_dispatch:
 jobs:
   verify:
     runs-on: ubuntu-latest

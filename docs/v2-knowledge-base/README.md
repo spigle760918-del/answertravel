@@ -41,7 +41,8 @@
 | `21-comparable-observation-cycle-intent-card.md` | 同口径样本扩充、可比较观察周期与自动复诊 | Gate A-F 已通过并封版 |
 | `22-real-brand-onboarding-intent-card.md` | 真实品牌资料导入、审核与单品牌运行基线 | Gate A-F 已通过并封版 |
 | `23-brand-truth-completion-approval-intent-card.md` | 品牌事实缺口补充、公开范围确认与批准 | Gate A-F 已完成并封版 |
-| `24-brand-truth-approval-intent-card.md` | 品牌真相基线批准与可增补版本 | Gate A-D 已完成，Gate E 待验收 |
+| `24-brand-truth-approval-intent-card.md` | 品牌真相基线批准与可增补版本 | Gate A-F 已完成并封版 |
+| `25-real-question-panel-intent-card.md` | 北京珈程真实游客问题组草拟 | Gate A 待确认 |
 
 ## 事实分级
 

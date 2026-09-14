@@ -9,6 +9,19 @@ const citationLabels: Record<string, string> = {
   provider_citation: "Provider 结构化引用",
   content_absorption_candidate: "内容吸收候选",
 };
+const objectTypeLabels: Record<string, string> = {
+  neutral_category: "中性品类问题",
+  brand_direct: "品牌直问",
+  competitor_direct: "竞品直问",
+  brand_comparison: "品牌对比",
+};
+const sentimentLabels: Record<string, string> = {
+  positive: "正向",
+  negative: "负向",
+  neutral: "中性",
+  mixed: "正负并存",
+  uncertain: "不确定",
+};
 
 export function AnswerDrawer({
   answer,
@@ -65,6 +78,75 @@ export function AnswerDrawer({
           <span>{answer.attempts} 次尝试</span>
         </div>
         <div className="answer-text">{answer.answerText}</div>
+        <section className="geo-evidence" aria-labelledby="geo-title">
+          <p className="eyebrow">品牌与竞品分析</p>
+          <h3 id="geo-title">提及、排名与主张证据</h3>
+          {answer.geoAnalysis.status === "pending" ? (
+            <p className="notice">GEO 分析尚未完成，当前不生成指标。</p>
+          ) : (
+            <>
+              <div className="analysis-meta">
+                <StatusPill
+                  value={objectTypeLabels[answer.geoAnalysis.questionObjectType ?? ""] ?? "问题类型不确定"}
+                />
+                <StatusPill value="basic-geo.v1" tone="good" />
+              </div>
+              <div className="analysis-block">
+                <h4>实体提及</h4>
+                {answer.geoAnalysis.mentions.length ? (
+                  answer.geoAnalysis.mentions.map((mention, index) => (
+                    <article key={`${mention.entityId}-${mention.matchedAlias}-${index}`}>
+                      <div>
+                        <strong>{mention.entityName}</strong>
+                        <StatusPill value={mention.entityRole === "brand" ? "品牌" : "竞品"} />
+                        <StatusPill value={mention.certainty === "certain" ? "明确" : "可能歧义"} tone={mention.certainty === "certain" ? "good" : "warn"} />
+                      </div>
+                      <p>命中名称：{mention.matchedAlias}</p>
+                      <blockquote>{mention.excerpt}</blockquote>
+                    </article>
+                  ))
+                ) : (
+                  <p className="empty">该回答未发现品牌或竞品明确提及。</p>
+                )}
+              </div>
+              <div className="analysis-block">
+                <h4>推荐排名</h4>
+                {answer.geoAnalysis.rankings.map((ranking) => (
+                  <article key={ranking.entityId}>
+                    <div>
+                      <strong>{ranking.entityName}</strong>
+                      <StatusPill
+                        value={ranking.applicability === "applicable" ? `第 ${ranking.rank} 名` : ranking.applicability === "uncertain" ? "不确定" : "不适用"}
+                        tone={ranking.applicability === "applicable" ? "good" : "warn"}
+                      />
+                    </div>
+                    <p>{ranking.reason}</p>
+                    {ranking.evidenceExcerpt ? <blockquote>{ranking.evidenceExcerpt}</blockquote> : null}
+                  </article>
+                ))}
+              </div>
+              <div className="analysis-block">
+                <h4>主张级描述</h4>
+                {answer.geoAnalysis.claims.length ? (
+                  answer.geoAnalysis.claims.map((claim, index) => (
+                    <article key={`${claim.entityId}-${index}`}>
+                      <div>
+                        <strong>{claim.entityName}</strong>
+                        <StatusPill
+                          value={sentimentLabels[claim.sentiment] ?? claim.sentiment}
+                          tone={claim.sentiment === "positive" ? "good" : claim.sentiment === "negative" ? "bad" : claim.sentiment === "uncertain" ? "warn" : "neutral"}
+                        />
+                      </div>
+                      <blockquote>{claim.claimText}</blockquote>
+                    </article>
+                  ))
+                ) : (
+                  <p className="empty">没有足够上下文形成品牌或竞品主张。</p>
+                )}
+              </div>
+            </>
+          )}
+        </section>
         <section className="citation-evidence" aria-labelledby="citation-title">
           <p className="eyebrow">可追溯关系</p>
           <h3 id="citation-title">引用与信源证据</h3>

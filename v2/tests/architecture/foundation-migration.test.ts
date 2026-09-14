@@ -76,4 +76,10 @@ describe("foundation migration guardrails", () => {
     expect(sql).toContain("reject_immutable_mutation");
     expect(sql).toContain("force row level security");
   });
+  it("keeps GEO entity, analysis, mention, ranking and claim facts append-only and tenant isolated", async () => {
+    const sql = await readFile(resolve(process.cwd(), "migrations/0008_basic_geo_intelligence.sql"), "utf8");
+    for (const table of ["geo_entity_sets", "geo_analysis_runs", "geo_entity_mentions", "geo_ranking_facts", "geo_claim_facts"]) expect(sql).toContain(table);
+    expect(sql).toContain("reject_immutable_mutation");
+    expect(sql).toContain("force row level security");
+  });
 });

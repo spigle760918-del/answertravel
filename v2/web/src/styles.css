@@ -404,6 +404,71 @@ nav button.active {
 .citation-evidence {
   margin: 26px 0;
 }
+.geo-evidence {
+  margin: 26px 0;
+}
+.geo-evidence h3,
+.analysis-block h4 {
+  margin: 7px 0 14px;
+}
+.analysis-meta {
+  margin-bottom: 14px;
+}
+.analysis-block {
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+  margin-top: 16px;
+}
+.analysis-block article {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px;
+  margin-bottom: 10px;
+}
+.analysis-block article p,
+.analysis-block blockquote {
+  color: var(--muted);
+  font-size: 12px;
+}
+.analysis-block blockquote {
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  border-left: 3px solid #8eb49b;
+  background: #f7f9f6;
+  overflow-wrap: anywhere;
+}
+.geo-intro > p {
+  color: var(--muted);
+  margin: -8px 0 0;
+}
+.geo-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+.metric-list,
+.sentiment-list {
+  display: grid;
+  gap: 10px;
+}
+.metric-list > div {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 16px;
+  padding: 14px;
+  border-radius: 12px;
+  background: #f7f9f6;
+}
+.metric-list small {
+  color: var(--muted);
+}
+.sentiment-list > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 13px 14px;
+  border-bottom: 1px solid var(--line);
+}
 .citation-evidence h3 {
   margin: 7px 0 14px;
 }
@@ -546,6 +611,10 @@ nav button.active {
   }
   .limit-grid {
     grid-template-columns: 1fr;
+  }
+  .geo-grid {
+    grid-template-columns: 1fr;
+    gap: 0;
   }
   .panel {
     padding: 20px;

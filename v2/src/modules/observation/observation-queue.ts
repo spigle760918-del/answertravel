@@ -13,6 +13,11 @@ import {
   enqueueCitationSource,
 } from "../citation-source/citation-source-queue.js";
 import {
+  createGeoIntelligenceQueue,
+  enqueueGeoAnalysis,
+  geoAnalysisJob,
+} from "../geo-intelligence/geo-intelligence-queue.js";
+import {
   DeepSeekAnswerClient,
   DeepSeekAnswerError,
 } from "./deepseek-answer-client.js";
@@ -79,6 +84,7 @@ export function createObservationWorker(
 ) {
   const connection = new Redis(redisUrl, { maxRetriesPerRequest: null });
   const citationProducer = createCitationSourceQueue(redisUrl);
+  const geoProducer = createGeoIntelligenceQueue(redisUrl);
   const repository = new ObservationRepository(pool);
   const client = new DeepSeekAnswerClient({
     apiKey,
@@ -108,6 +114,7 @@ export function createObservationWorker(
           citationProducer.queue,
           citationScanJob(existing),
         );
+        await enqueueGeoAnalysis(geoProducer.queue, geoAnalysisJob(existing));
         return { answerId: existing.id, idempotent: true };
       }
       const attempt = job.attemptsMade + 1;
@@ -186,6 +193,7 @@ export function createObservationWorker(
           citationProducer.queue,
           citationScanJob(answer),
         );
+        await enqueueGeoAnalysis(geoProducer.queue, geoAnalysisJob(answer));
         return { answerId: answer.id, idempotent: false };
       } catch (error) {
         if (!(error instanceof DeepSeekAnswerError)) throw error;
@@ -219,6 +227,7 @@ export function createObservationWorker(
     close: async () => {
       await worker.close();
       await citationProducer.close();
+      await geoProducer.close();
       connection.disconnect();
     },
   };

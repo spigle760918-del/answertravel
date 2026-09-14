@@ -33,6 +33,9 @@ import {
 import { createObservationPlan } from "../src/modules/observation/observation.js";
 import { ObservationRepository } from "../src/modules/observation/observation-repository.js";
 import { createCitationSourceWorker } from "../src/modules/citation-source/citation-source-queue.js";
+import { createGeoIntelligenceWorker } from "../src/modules/geo-intelligence/geo-intelligence-queue.js";
+import { GeoIntelligenceRepository } from "../src/modules/geo-intelligence/geo-intelligence-repository.js";
+import { geoEntitySetSchema } from "../src/modules/geo-intelligence/geo-intelligence.js";
 import {
   createObservationQueue,
   createObservationWorker,
@@ -397,6 +400,14 @@ try {
         }),
         "deepseek-smoke-test",
       );
+      await new GeoIntelligenceRepository(smokePool).createEntitySet(
+        geoEntitySetSchema.parse({
+          id: randomUUID(), tenantId: smokeTenantId, version: 1, status: "approved", createdAt: new Date().toISOString(),
+          brand: { id: "brand", name: "远行测试旅行社", aliases: ["远行旅行"] },
+          competitors: [{ id: "competitor-a", name: "同行测试旅行社", aliases: [] }],
+        }),
+        "deepseek-smoke-test",
+      );
       const questionRepository = new QuestionIntelligenceRepository(smokePool);
       const service = new QuestionIntelligenceService(
         new DeepSeekQuestionGenerator({
@@ -527,6 +538,7 @@ try {
       );
       const producer = createObservationQueue(redisUrl);
       const citations = createCitationSourceWorker(redisUrl, smokePool);
+      const geoIntelligence = createGeoIntelligenceWorker(redisUrl, smokePool);
       const consumer = createObservationWorker(
         redisUrl,
         smokePool,
@@ -534,6 +546,7 @@ try {
       );
       try {
         await citations.worker.waitUntilReady();
+        await geoIntelligence.worker.waitUntilReady();
         await consumer.worker.waitUntilReady();
         const selectedTargets = [
           observation.targets[0],
@@ -583,9 +596,17 @@ try {
             );
           await delay(250);
         }
+        for (let poll = 0; poll < 120; poll++) {
+          const runCount = await withTenantTransaction(smokePool, smokeTenantId, (client) =>
+            client.query<{ count: string }>("select count(*)::text as count from geo_analysis_runs"));
+          if (runCount.rows[0]?.count === "4") break;
+          if (poll === 119) throw new Error("GEO analysis did not complete for all real answers.");
+          await delay(250);
+        }
       } finally {
         await consumer.close();
         await citations.close();
+        await geoIntelligence.close();
         await producer.close();
       }
       const answerCount = await withTenantTransaction(

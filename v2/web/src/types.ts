@@ -75,6 +75,33 @@ export type Overview = {
           };
         }>;
       };
+      geoAnalysis: {
+        status: "pending" | "completed" | "failed";
+        questionObjectType: string | null;
+        mentions: Array<{
+          entityId: string;
+          entityName: string;
+          entityRole: string;
+          matchedAlias: string;
+          excerpt: string;
+          certainty: string;
+        }>;
+        rankings: Array<{
+          entityId: string;
+          entityName: string;
+          applicability: string;
+          rank: number | null;
+          reason: string;
+          evidenceExcerpt: string | null;
+        }>;
+        claims: Array<{
+          entityId: string;
+          entityName: string;
+          claimText: string;
+          sentiment: string;
+          certainty: string;
+        }>;
+      };
     }>;
     failures: Array<{
       question: string;
@@ -84,6 +111,21 @@ export type Overview = {
       attempt: number;
       completedAt: string;
     }>;
+  };
+  geoIntelligence: {
+    rulesVersion: "basic-geo.v1";
+    naturalSampleCount: number;
+    brandNaturalMentionCount: number;
+    brandNaturalMentionRate: number | null;
+    competitorNaturalMentions: Array<{
+      entityId: string;
+      entityName: string;
+      count: number;
+      rate: number | null;
+    }>;
+    applicableRankingFacts: number;
+    claimSentiments: Array<{ sentiment: string; count: number }>;
+    note: string;
   };
   limitations: string[];
 };

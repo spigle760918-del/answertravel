@@ -2,13 +2,23 @@ import { useEffect, useMemo, useState } from "react";
 import type { Overview } from "./types";
 import { StatusPill } from "./components/StatusPill";
 import { AnswerDrawer } from "./components/AnswerDrawer";
-type Tab = "overview" | "truth" | "questions" | "runs";
+type Tab = "overview" | "truth" | "questions" | "geo" | "runs";
 const tabs: Array<[Tab, string]> = [
   ["overview", "项目概览"],
   ["truth", "品牌真相"],
   ["questions", "游客问题"],
+  ["geo", "GEO 情报"],
   ["runs", "采集与回答"],
 ];
+const percent = (value: number | null) =>
+  value === null ? "证据不足" : `${Math.round(value * 100)}%`;
+const sentimentLabels: Record<string, string> = {
+  positive: "正向",
+  negative: "负向",
+  neutral: "中性",
+  mixed: "正负并存",
+  uncertain: "不确定",
+};
 export default function App() {
   const [data, setData] = useState<Overview | null>(null);
   const [error, setError] = useState(false);
@@ -97,8 +107,7 @@ export default function App() {
                   <p className="eyebrow">真实链路验收</p>
                   <h1>从品牌事实，到游客问题，再到每一条 AI 回答</h1>
                   <p>
-                    所有数字都来自 V2 数据库，可以继续下钻。当前尚未计算 GEO
-                    指标。
+                    所有数字都来自 V2 数据库，可以继续下钻到原始回答与来源证据。
                   </p>
                 </div>
                 <div className="ring">
@@ -215,6 +224,112 @@ export default function App() {
                 ))}
               </div>
             </section>
+          )}
+          {tab === "geo" && (
+            <>
+              <section className="panel geo-intro">
+                <div className="panel-head">
+                  <div>
+                    <p className="eyebrow">同口径基础情报</p>
+                    <h1>品牌与竞品如何被 AI 描述</h1>
+                  </div>
+                  <StatusPill value={data.geoIntelligence.rulesVersion} tone="good" />
+                </div>
+                <p>{data.geoIntelligence.note}</p>
+              </section>
+              <section className="stat-grid geo-stats">
+                <article>
+                  <span>中性问题有效样本</span>
+                  <strong>{data.geoIntelligence.naturalSampleCount}</strong>
+                  <small>品牌直问不计入</small>
+                </article>
+                <article>
+                  <span>品牌自然提及率</span>
+                  <strong>{percent(data.geoIntelligence.brandNaturalMentionRate)}</strong>
+                  <small>{data.geoIntelligence.brandNaturalMentionCount} 条明确提及</small>
+                </article>
+                <article>
+                  <span>可用排名事实</span>
+                  <strong>{data.geoIntelligence.applicableRankingFacts || "不适用"}</strong>
+                  <small>仅明确有序推荐才计算</small>
+                </article>
+                <article>
+                  <span>主张级描述</span>
+                  <strong>{data.geoIntelligence.claimSentiments.reduce((sum, item) => sum + item.count, 0)}</strong>
+                  <small>不按整篇回答粗分情感</small>
+                </article>
+              </section>
+              <section className="geo-grid">
+                <article className="panel">
+                  <div className="panel-head">
+                    <div>
+                      <p className="eyebrow">竞品同口径对比</p>
+                      <h2>中性问题自然提及</h2>
+                    </div>
+                  </div>
+                  {data.geoIntelligence.competitorNaturalMentions.length ? (
+                    <div className="metric-list">
+                      {data.geoIntelligence.competitorNaturalMentions.map((item) => (
+                        <div key={item.entityId}>
+                          <span>{item.entityName}</span>
+                          <strong>{percent(item.rate)}</strong>
+                          <small>{item.count} 条明确提及</small>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="empty">当前中性样本未发现竞品明确提及。</p>
+                  )}
+                </article>
+                <article className="panel">
+                  <div className="panel-head">
+                    <div>
+                      <p className="eyebrow">主张级情感</p>
+                      <h2>AI 如何描述各实体</h2>
+                    </div>
+                  </div>
+                  {data.geoIntelligence.claimSentiments.length ? (
+                    <div className="sentiment-list">
+                      {data.geoIntelligence.claimSentiments.map((item) => (
+                        <div key={item.sentiment}>
+                          <StatusPill
+                            value={sentimentLabels[item.sentiment] ?? item.sentiment}
+                            tone={item.sentiment === "positive" ? "good" : item.sentiment === "negative" ? "bad" : item.sentiment === "uncertain" ? "warn" : "neutral"}
+                          />
+                          <strong>{item.count}</strong>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="empty">当前没有可归属到品牌或竞品的主张。</p>
+                  )}
+                </article>
+              </section>
+              <section className="panel">
+                <div className="panel-head">
+                  <div>
+                    <p className="eyebrow">逐条追溯</p>
+                    <h2>查看每条回答的提及、排名与描述</h2>
+                  </div>
+                </div>
+                <div className="answer-list">
+                  {data.observations.answers.map((answer) => (
+                    <button key={answer.id} onClick={() => setSelected(answer)}>
+                      <span>第 {answer.round} 轮</span>
+                      <div>
+                        <strong>{answer.question}</strong>
+                        <small>
+                          {answer.geoAnalysis.status === "completed"
+                            ? `${answer.geoAnalysis.mentions.length} 个提及 · ${answer.geoAnalysis.claims.length} 条主张`
+                            : "分析尚未完成"}
+                        </small>
+                      </div>
+                      <b>查看证据 →</b>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            </>
           )}
           {tab === "runs" && (
             <>

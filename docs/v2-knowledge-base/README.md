@@ -36,7 +36,7 @@
 | `16-deepseek-observation-intent-card.md` | DeepSeek API 真实答案采集与不可变证据 | Gate A-F 已通过并封版 |
 | `17-visible-acceptance-console-intent-card.md` | 面向文旅负责人的 V2 可视化验收台 | Gate A-F 已通过并封版 |
 | `18-citation-source-evidence-intent-card.md` | 回答引用候选、来源快照与安全抓取证据 | Gate A-F 已通过并封版 |
-| `19-basic-geo-intelligence-intent-card.md` | 品牌/竞品提及、条件化排名、主张情感与同口径对比 | Gate A 待用户确认 |
+| `19-basic-geo-intelligence-intent-card.md` | 品牌/竞品提及、条件化排名、主张情感与同口径对比 | Gate A-D 已完成，Gate E 待用户验收 |
 
 ## 事实分级
 

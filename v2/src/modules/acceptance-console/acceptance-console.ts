@@ -78,6 +78,13 @@ export type AcceptanceOverview = {
           };
         }>;
       };
+      geoAnalysis: {
+        status: "pending" | "completed" | "failed";
+        questionObjectType: string | null;
+        mentions: Array<{ entityId: string; entityName: string; entityRole: string; matchedAlias: string; excerpt: string; certainty: string }>;
+        rankings: Array<{ entityId: string; entityName: string; applicability: string; rank: number | null; reason: string; evidenceExcerpt: string | null }>;
+        claims: Array<{ entityId: string; entityName: string; claimText: string; sentiment: string; certainty: string }>;
+      };
     }>;
     failures: Array<{
       question: string;
@@ -87,6 +94,16 @@ export type AcceptanceOverview = {
       attempt: number;
       completedAt: string;
     }>;
+  };
+  geoIntelligence: {
+    rulesVersion: "basic-geo.v1";
+    naturalSampleCount: number;
+    brandNaturalMentionCount: number;
+    brandNaturalMentionRate: number | null;
+    competitorNaturalMentions: Array<{ entityId: string; entityName: string; count: number; rate: number | null }>;
+    applicableRankingFacts: number;
+    claimSentiments: Array<{ sentiment: string; count: number }>;
+    note: string;
   };
   limitations: string[];
 };
@@ -103,6 +120,9 @@ export class AcceptanceConsoleRepository {
       );
       const panel = await client.query(
         `select version,status,candidates,mix from question_panels order by created_at desc,version desc limit 1`,
+      );
+      const entitySet = await client.query(
+        `select brand,competitors from geo_entity_sets where status='approved' order by created_at desc,version desc limit 1`,
       );
       const plans =
         await client.query(`select p.id,p.model,p.surface,p.planned_samples,p.created_at,
@@ -123,13 +143,22 @@ export class AcceptanceConsoleRepository {
         from citation_events e left join lateral (select status,http_status,title,author,published_at,text_excerpt,content_sha256,error_code,captured_at
           from source_snapshots where tenant_id=e.tenant_id and citation_event_id=e.id order by attempt desc limit 1) s on true
         order by e.created_at,e.id`);
+      const geoRuns = await client.query(`select id,answer_id,status,question_object_type from geo_analysis_runs where rules_version='basic-geo.v1'`);
+      const geoMentions = await client.query(`select run_id,entity_id,entity_role,matched_alias,excerpt,certainty from geo_entity_mentions`);
+      const geoRankings = await client.query(`select run_id,entity_id,applicability,rank,reason,evidence_excerpt from geo_ranking_facts`);
+      const geoClaims = await client.query(`select run_id,entity_id,claim_text,sentiment,certainty from geo_claim_facts`);
       const failures = await client.query(
         `select t.question_text,t.round,a.status,a.error_code,a.attempt,a.completed_at from observation_attempts a join observation_targets t on t.tenant_id=a.tenant_id and t.id=a.target_id where a.status<>'succeeded' order by a.completed_at desc`,
       );
       const b = brand.rows[0],
         q = quality.rows[0],
-        p = panel.rows[0];
+        p = panel.rows[0],
+        entities = entitySet.rows[0];
       if (!b || !p) throw new Error("Acceptance dataset is incomplete.");
+      const entityNames = new Map<string, string>();
+      if (entities?.brand) entityNames.set(entities.brand.id, entities.brand.name);
+      for (const competitor of entities?.competitors ?? [])
+        entityNames.set(competitor.id, competitor.name);
       const scansByAnswer = new Map(
         citationScans.rows.map((row) => [row.answer_id, row]),
       );
@@ -139,6 +168,17 @@ export class AcceptanceConsoleRepository {
         current.push(event);
         eventsByAnswer.set(event.answer_id, current);
       }
+      const runsByAnswer = new Map(geoRuns.rows.map((row) => [row.answer_id, row]));
+      const groupByRun = <T extends { run_id: string }>(rows: T[]) => {
+        const grouped = new Map<string, T[]>(); for (const row of rows) { const current = grouped.get(row.run_id) ?? []; current.push(row); grouped.set(row.run_id, current); } return grouped;
+      };
+      const mentionsByRun = groupByRun(geoMentions.rows), rankingsByRun = groupByRun(geoRankings.rows), claimsByRun = groupByRun(geoClaims.rows);
+      const neutralRuns = geoRuns.rows.filter((row) => row.status === "completed" && row.question_object_type === "neutral_category");
+      const brandNaturalMentionCount = neutralRuns.filter((run) => (mentionsByRun.get(run.id) ?? []).some((item) => item.entity_role === "brand" && item.certainty === "certain")).length;
+      const competitorCounts = new Map<string, number>();
+      for (const run of neutralRuns) for (const entityId of new Set((mentionsByRun.get(run.id) ?? []).filter((item) => item.entity_role === "competitor" && item.certainty === "certain").map((item) => item.entity_id)))
+        competitorCounts.set(entityId, (competitorCounts.get(entityId) ?? 0) + 1);
+      const sentimentCounts = new Map<string, number>(); for (const claim of geoClaims.rows) sentimentCounts.set(claim.sentiment, (sentimentCounts.get(claim.sentiment) ?? 0) + 1);
       return {
         environment: "acceptance_test",
         brand: {
@@ -222,6 +262,14 @@ export class AcceptanceConsoleRepository {
                   : null,
               })),
             },
+            geoAnalysis: (() => {
+              const run = runsByAnswer.get(x.id);
+              if (!run) return { status: "pending" as const, questionObjectType: null, mentions: [], rankings: [], claims: [] };
+              return { status: run.status, questionObjectType: run.question_object_type,
+                mentions: (mentionsByRun.get(run.id) ?? []).map((item) => ({ entityId: item.entity_id, entityName: entityNames.get(item.entity_id) ?? item.entity_id, entityRole: item.entity_role, matchedAlias: item.matched_alias, excerpt: item.excerpt, certainty: item.certainty })),
+                rankings: (rankingsByRun.get(run.id) ?? []).map((item) => ({ entityId: item.entity_id, entityName: entityNames.get(item.entity_id) ?? item.entity_id, applicability: item.applicability, rank: item.rank, reason: item.reason, evidenceExcerpt: item.evidence_excerpt })),
+                claims: (claimsByRun.get(run.id) ?? []).map((item) => ({ entityId: item.entity_id, entityName: entityNames.get(item.entity_id) ?? item.entity_id, claimText: item.claim_text, sentiment: item.sentiment, certainty: item.certainty })) };
+            })(),
           })),
           failures: failures.rows.map((x) => ({
             question: x.question_text,
@@ -232,10 +280,20 @@ export class AcceptanceConsoleRepository {
             completedAt: x.completed_at.toISOString(),
           })),
         },
+        geoIntelligence: {
+          rulesVersion: "basic-geo.v1",
+          naturalSampleCount: neutralRuns.length,
+          brandNaturalMentionCount,
+          brandNaturalMentionRate: neutralRuns.length ? brandNaturalMentionCount / neutralRuns.length : null,
+          competitorNaturalMentions: [...competitorCounts.entries()].map(([entityId, count]) => ({ entityId, entityName: entityNames.get(entityId) ?? entityId, count, rate: neutralRuns.length ? count / neutralRuns.length : null })),
+          applicableRankingFacts: geoRankings.rows.filter((row) => row.applicability === "applicable").length,
+          claimSentiments: [...sentimentCounts.entries()].map(([sentiment, count]) => ({ sentiment, count })),
+          note: "仅统计中性品类问题的自然提及；品牌/竞品直问不进入该分母。",
+        },
         limitations: [
           "当前为验收测试数据，不代表真实品牌运营结果",
           "当前仅验证 DeepSeek API，不代表 DeepSeek Web/App 搜索表现",
-          "尚未计算品牌提及率、排名、情感、引用或趋势",
+          "当前仅提供基础提及、条件化排名和规则型主张情感，不代表完整 GEO 决策或趋势",
           "引用候选与页面快照不等于内容被模型吸收或产生因果影响",
         ],
       };

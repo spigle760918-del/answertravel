@@ -9,6 +9,9 @@ import { BrandTruthRepository } from "../../src/modules/brand-truth/brand-truth-
 import { AcceptanceConsoleRepository } from "../../src/modules/acceptance-console/acceptance-console.js";
 import { createCitationSourceWorker } from "../../src/modules/citation-source/citation-source-queue.js";
 import { CitationSourceRepository } from "../../src/modules/citation-source/citation-source-repository.js";
+import { createGeoIntelligenceWorker } from "../../src/modules/geo-intelligence/geo-intelligence-queue.js";
+import { GeoIntelligenceRepository } from "../../src/modules/geo-intelligence/geo-intelligence-repository.js";
+import { geoEntitySetSchema } from "../../src/modules/geo-intelligence/geo-intelligence.js";
 import { createObservationPlan } from "../../src/modules/observation/observation.js";
 import {
   createObservationQueue,
@@ -36,9 +39,11 @@ integration("durable DeepSeek observations", () => {
   const tenantId = randomUUID();
   const observations = new ObservationRepository(pool);
   const citations = new CitationSourceRepository(pool);
+  const geo = new GeoIntelligenceRepository(pool);
   let producer: ReturnType<typeof createObservationQueue>;
   let consumer: ReturnType<typeof createObservationWorker>;
   let citationConsumer: ReturnType<typeof createCitationSourceWorker>;
+  let geoConsumer: ReturnType<typeof createGeoIntelligenceWorker>;
   let calls = 0;
   let targets: any[] = [];
   const fetchImpl = (async () => {
@@ -56,7 +61,7 @@ integration("durable DeepSeek observations", () => {
             finish_reason: "stop",
             message: {
               content:
-                "这是一次真实结构的测试回答。参考来源：https://example.com/article?utm_source=test",
+                "测试旅行社服务专业，值得推荐。竞品旅行社也提供相关服务。参考来源：https://example.com/article?utm_source=test",
             },
           },
         ],
@@ -94,6 +99,13 @@ integration("durable DeepSeek observations", () => {
       approveBrandTruth({
         ...draft,
         facts: draft.facts.map((x) => ({ ...x, status: "approved" as const })),
+      }),
+    );
+    await geo.createEntitySet(
+      geoEntitySetSchema.parse({
+        id: randomUUID(), tenantId, version: 1, status: "approved", createdAt: new Date().toISOString(),
+        brand: { id: "brand", name: "测试旅行社", aliases: [] },
+        competitors: [{ id: "competitor-a", name: "竞品旅行社", aliases: [] }],
       }),
     );
     const evidence = await new EvidenceRepository(pool).append(
@@ -203,13 +215,16 @@ integration("durable DeepSeek observations", () => {
           },
         )) as typeof fetch,
     });
+    geoConsumer = createGeoIntelligenceWorker(redisUrl!, pool);
     consumer = createObservationWorker(redisUrl!, pool, "test-key", fetchImpl);
     await citationConsumer.worker.waitUntilReady();
+    await geoConsumer.worker.waitUntilReady();
     await consumer.worker.waitUntilReady();
   });
   afterAll(async () => {
     await consumer?.close();
     await citationConsumer?.close();
+    await geoConsumer?.close();
     await producer?.close();
     await pool.end();
     await admin.end();
@@ -252,10 +267,73 @@ integration("durable DeepSeek observations", () => {
       { timeout: 10_000 },
     );
     expect(await citations.scanForAnswer(randomUUID(), answer!.id)).toBeNull();
+    await vi.waitFor(
+      async () =>
+        expect(await geo.runForAnswer(tenantId, answer!.id)).not.toBeNull(),
+      { timeout: 10_000 },
+    );
+    const geoRun = await geo.runForAnswer(tenantId, answer!.id);
+    expect(geoRun).toMatchObject({
+      status: "completed",
+      questionObjectType: "neutral_category",
+      rulesVersion: "basic-geo.v1",
+    });
+    const geoFacts = await withTenantTransaction(pool, tenantId, async (client) => {
+      const mentions = await client.query(
+        "select entity_id,entity_role,matched_alias,certainty from geo_entity_mentions where run_id=$1 order by start_offset",
+        [geoRun!.id],
+      );
+      const rankings = await client.query(
+        "select entity_id,applicability,rank,reason from geo_ranking_facts where run_id=$1 order by entity_id",
+        [geoRun!.id],
+      );
+      const claims = await client.query(
+        "select entity_id,sentiment,claim_text from geo_claim_facts where run_id=$1 order by entity_id,claim_text",
+        [geoRun!.id],
+      );
+      return { mentions: mentions.rows, rankings: rankings.rows, claims: claims.rows };
+    });
+    expect(geoFacts.mentions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ entity_id: "brand", entity_role: "brand", certainty: "certain" }),
+        expect.objectContaining({ entity_id: "competitor-a", entity_role: "competitor", certainty: "certain" }),
+      ]),
+    );
+    expect(geoFacts.rankings).toHaveLength(2);
+    expect(
+      geoFacts.rankings.every(
+        (item) => item.applicability === "not_applicable" && item.rank === null,
+      ),
+    ).toBe(true);
+    expect(geoFacts.claims).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ entity_id: "brand", sentiment: "positive" }),
+      ]),
+    );
+    expect(await geo.runForAnswer(randomUUID(), answer!.id)).toBeNull();
     const overview = await new AcceptanceConsoleRepository(pool).overview(tenantId);
     expect(overview.observations.answers.find((item) => item.id === answer!.id)?.citationEvidence.events[0]?.snapshot).toMatchObject({
       status: "succeeded",
       title: "来源文章",
+    });
+    const overviewAnswer = overview.observations.answers.find(
+      (item) => item.id === answer!.id,
+    );
+    expect(overviewAnswer?.geoAnalysis).toMatchObject({
+      status: "completed",
+      questionObjectType: "neutral_category",
+    });
+    expect(overviewAnswer?.geoAnalysis.mentions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ entityName: "测试旅行社", entityRole: "brand" }),
+        expect.objectContaining({ entityName: "竞品旅行社", entityRole: "competitor" }),
+      ]),
+    );
+    expect(overview.geoIntelligence).toMatchObject({
+      naturalSampleCount: 1,
+      brandNaturalMentionCount: 1,
+      brandNaturalMentionRate: 1,
+      applicableRankingFacts: 0,
     });
     const completed = await producer.queue.getJob(job.id!);
     await completed!.remove();
@@ -272,9 +350,18 @@ integration("durable DeepSeek observations", () => {
     ).toBe(true);
     const persistedScan = await citations.scanForAnswer(tenantId, answer!.id);
     expect(persistedScan?.events).toHaveLength(1);
+    expect((await geo.runForAnswer(tenantId, answer!.id))?.id).toBe(geoRun!.id);
     await expect(
       withTenantTransaction(pool, tenantId, (client) =>
         client.query("update citation_scans set candidate_count=0 where answer_id=$1", [answer!.id]),
+      ),
+    ).rejects.toThrow("append-only");
+    await expect(
+      withTenantTransaction(pool, tenantId, (client) =>
+        client.query(
+          "update geo_analysis_runs set question_object_type='brand_direct' where id=$1",
+          [geoRun!.id],
+        ),
       ),
     ).rejects.toThrow("append-only");
   });

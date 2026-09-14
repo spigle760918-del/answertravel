@@ -369,7 +369,7 @@ export class AcceptanceConsoleRepository {
           brandName: onboardingRow.package.brandName,
           status: onboardingRow.status,
           sources: onboardingRow.package.sources.map((item:any)=>({sourceType:item.sourceType,reference:item.reference,capturedAt:item.capturedAt})),
-          facts: onboardingRow.package.facts.map((item:any)=>({statement:item.statement,category:item.category,visibility:item.visibility,confidence:item.confidence,needsHumanConfirmation:item.needsHumanConfirmation})),
+          facts: onboardingRow.package.facts.map((item:any)=>({statement:item.visibility === "restricted" ? "[受限事实：具体内容不在验收台展示]" : item.statement,category:item.category,visibility:item.visibility,confidence:item.confidence,needsHumanConfirmation:item.needsHumanConfirmation})),
           competitors: onboardingRow.package.competitors.map((item:any)=>({name:item.name,aliases:item.aliases,needsHumanConfirmation:item.needsHumanConfirmation})),
           seedQuestions: onboardingRow.package.seedQuestions.map((item:any)=>({text:item.text,group:item.group})),
           conflicts: onboardingRow.package.conflicts,

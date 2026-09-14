@@ -71,6 +71,8 @@ describe.runIf(Boolean(databaseUrl && adminUrl && redisUrl))("acceptance console
       expect(response.body).not.toContain("browser-secret");
       expect(response.body).not.toContain("header-secret");
       expect(response.body).not.toContain(databaseUrl!);
+      expect(response.body).not.toContain("91110112");
+      expect(response.body).not.toContain("齐正春");
     } finally { await app.close(); }
   });
 

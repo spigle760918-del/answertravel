@@ -1,4 +1,6 @@
+import { randomUUID } from "node:crypto";
 import { z } from "zod";
+import { brandTruthCardSchema, type BrandTruthCard } from "../brand-truth/brand-truth.js";
 
 export const benchmarkFactSchema = z.object({
   statement: z.string().min(1), category: z.enum(["identity", "product", "service", "restriction"]),
@@ -11,6 +13,16 @@ export const benchmarkPackSchema = z.object({
   uncertainSignals: z.array(z.string()), sourceNote: z.string(),
 });
 export type BenchmarkFactPack = z.infer<typeof benchmarkPackSchema>;
+
+export function buildBrandTruthDraftFromBenchmark(input: { tenantId: string; brandName: string; pack?: BenchmarkFactPack; createdAt?: string }): BrandTruthCard {
+  const pack = input.pack ?? buildBenchmarkFactPack();
+  const facts = pack.facts.filter((fact) => fact.accepted && fact.visibility === "public").map((fact) => ({
+    id: randomUUID(), statement: fact.statement, category: fact.category === "restriction" ? "restriction" : fact.category,
+    status: "draft" as const, factLevel: fact.evidence === "official_registry" || fact.evidence === "licensed_platform" || fact.evidence === "web_snapshot" ? "F1" as const : "F0" as const,
+    public: true, visibility: "public" as const, source: { type: fact.evidence === "official_registry" || fact.evidence === "licensed_platform" || fact.evidence === "web_snapshot" ? "official" as const : "human" as const, reference: fact.source },
+  }));
+  return brandTruthCardSchema.parse({ id: randomUUID(), tenantId: input.tenantId, brandName: input.brandName, version: 1, status: "draft", facts, createdAt: input.createdAt ?? new Date().toISOString() });
+}
 
 export function buildBenchmarkFactPack(capturedAt = new Date().toISOString()): BenchmarkFactPack {
   return benchmarkPackSchema.parse({

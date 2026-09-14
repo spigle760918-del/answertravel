@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { buildBenchmarkFactPack } from "../../src/modules/real-brand-onboarding/benchmark-fact-pack.js";
+import { buildBenchmarkFactPack, buildBrandTruthDraftFromBenchmark } from "../../src/modules/real-brand-onboarding/benchmark-fact-pack.js";
+import { randomUUID } from "node:crypto";
 
 describe("benchmark fact pack",()=>{
   it("keeps official, licensed, self-reported and uncertain facts separate",()=>{
@@ -12,5 +13,12 @@ describe("benchmark fact pack",()=>{
   it("blocks exaggerated claims from accepted facts",()=>{
     const pack=buildBenchmarkFactPack();
     for(const phrase of pack.forbiddenExpressions) expect(pack.facts.every(x=>x.accepted? !x.statement.includes(phrase):true)).toBe(true);
+  });
+  it("creates only a draft from accepted public candidates",()=>{
+    const card=buildBrandTruthDraftFromBenchmark({tenantId:randomUUID(),brandName:"北京珈程国际旅行社"});
+    expect(card.status).toBe("draft");
+    expect(card.facts.length).toBe(12);
+    expect(card.facts.every((fact)=>fact.status==="draft"&&fact.public&&fact.visibility==="public")).toBe(true);
+    expect(card.facts.some((fact)=>fact.statement.includes("91110112"))).toBe(false);
   });
 });

@@ -443,7 +443,16 @@ export default function App() {
             )
           )}
           {tab === "cycles" && (
-            data.observationCycles ? (
+            <>
+              {data.periodicMonitoring ? <>
+                <section className="panel">
+                  <div className="panel-head"><div><p className="eyebrow">周期化监测</p><h1>每日计划已进入持久化调度</h1></div><div><StatusPill value={data.periodicMonitoring.status === "active" ? "已启用" : "已暂停"} tone={data.periodicMonitoring.status === "active" ? "good" : "warn"} /><StatusPill value="DeepSeek API" tone="good" /></div></div>
+                  <div className="decision-summary"><h2>普通周期自动运行，真正门禁才找人</h2><p>固定 20 条问题、每题 2 轮；失败会保留并按规则重试，不会用追加样本粉饰成功率。</p></div>
+                </section>
+                <section className="stat-grid decision-stats"><article><span>每周期最大样本</span><strong>{data.periodicMonitoring.maxSamplesPerCycle}</strong><small>固定问题组</small></article><article><span>每周期 Token 上限</span><strong>{data.periodicMonitoring.maxTokensPerCycle}</strong><small>达到即停止</small></article><article><span>已计划周期</span><strong>{data.periodicMonitoring.cycles.length}</strong><small>持久化且幂等</small></article><article><span>长期云端计费</span><strong>未开启</strong><small>本轮仅验收测试</small></article></section>
+                <section className="decision-grid"><article className="panel"><p className="eyebrow">下次计划</p><h2>{new Date(data.periodicMonitoring.nextRunAt).toLocaleString("zh-CN")}</h2><p>时区：{data.periodicMonitoring.timezone}</p></article><article className="panel"><p className="eyebrow">授权依据</p><h2>范围没有扩大</h2><p>{data.periodicMonitoring.decisionReference}</p></article></section>
+              </> : <section className="panel"><h1>周期化监测尚未启用</h1><p className="empty">系统不会在没有明确范围和预算时自动产生计费任务。</p></section>}
+              {data.observationCycles ? (
               <>
                 <section className="panel">
                   <div className="panel-head"><div><p className="eyebrow">同口径样本扩充</p><h1>第二观察周期已经形成</h1></div><div><StatusPill value={data.observationCycles.status === "comparable" ? "可比较" : "不可比较"} tone={data.observationCycles.status === "comparable" ? "good" : "warn"} /><StatusPill value={data.observationCycles.rulesVersion} tone="good" /></div></div>
@@ -460,7 +469,8 @@ export default function App() {
                   <article className="panel"><p className="eyebrow">可比较性检查</p><h2>{data.observationCycles.differences.length ? "发现口径差异" : "关键口径完全一致"}</h2>{data.observationCycles.differences.length ? <ul>{data.observationCycles.differences.map((item) => <li key={item}>{item}</li>)}</ul> : <p>问题组、模型、终端、语言、区域、温度和回答长度上限均一致。</p>}</article>
                 </section>
               </>
-            ) : <section className="panel"><h1>第二观察周期尚未形成</h1><p className="empty">系统不会用未获授权或不可比较的数据填充趋势。</p></section>
+            ) : null}
+            </>
           )}
           {tab === "runs" && (
             <>

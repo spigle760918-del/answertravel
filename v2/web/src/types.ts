@@ -178,6 +178,7 @@ export type Overview = {
     diagnosisId: string | null;
     createdAt: string;
   };
+  periodicMonitoring: null | { status:"active"|"paused"; cadence:"daily"; timezone:"Asia/Shanghai"; nextRunAt:string; maxSamplesPerCycle:number; maxTokensPerCycle:number; decisionReference:string; cycles:Array<{cycleKey:string;scheduledFor:string;observationPlanId:string;status:"planned"}> };
   realBrandOnboarding: null | {
     brandName: string;
     status: "draft";

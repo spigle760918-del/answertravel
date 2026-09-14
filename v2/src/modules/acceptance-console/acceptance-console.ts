@@ -109,6 +109,16 @@ export type AcceptanceOverview = {
     diagnosisId: string | null;
     createdAt: string;
   };
+  periodicMonitoring: null | {
+    status: "active" | "paused";
+    cadence: "daily";
+    timezone: "Asia/Shanghai";
+    nextRunAt: string;
+    maxSamplesPerCycle: number;
+    maxTokensPerCycle: number;
+    decisionReference: string;
+    cycles: Array<{ cycleKey: string; scheduledFor: string; observationPlanId: string; status: "planned" }>;
+  };
   realBrandOnboarding: null | {
     brandName: string;
     status: "draft";
@@ -193,6 +203,9 @@ export class AcceptanceConsoleRepository {
       const deepDive = diagnosisRow ? await client.query(`select * from competitor_deep_dive_recommendations where diagnosis_id=$1 limit 1`, [diagnosisRow.id]) : { rows: [] };
       const comparable = await client.query(`select c.*,a.max_new_samples,a.max_total_tokens,a.decision_reference from comparable_observation_snapshots c join sampling_expansion_authorizations a on a.tenant_id=c.tenant_id and a.id=c.authorization_id order by c.created_at desc,c.id desc limit 1`);
       const comparableRow = comparable.rows[0];
+      const periodic = await client.query(`select * from monitoring_schedules order by created_at desc limit 1`);
+      const periodicRow = periodic.rows[0];
+      const periodicCycles = periodicRow ? await client.query(`select * from monitoring_cycles where schedule_id=$1 order by scheduled_for desc`,[periodicRow.id]) : {rows:[]};
       const onboarding = await client.query(`select package,status from real_brand_onboarding_packages order by created_at desc,id desc limit 1`);
       const onboardingRow = onboarding.rows[0];
       const failures = await client.query(
@@ -367,6 +380,11 @@ export class AcceptanceConsoleRepository {
           decisionReference: comparableRow.decision_reference,
           diagnosisId: comparableRow.diagnosis_id,
           createdAt: comparableRow.created_at.toISOString(),
+        } : null,
+        periodicMonitoring: periodicRow ? {
+          status:periodicRow.status,cadence:periodicRow.cadence,timezone:periodicRow.timezone,nextRunAt:periodicRow.next_run_at.toISOString(),
+          maxSamplesPerCycle:periodicRow.max_samples_per_cycle,maxTokensPerCycle:periodicRow.rules.maxTotalTokens,decisionReference:periodicRow.decision_reference,
+          cycles:periodicCycles.rows.map((item)=>({cycleKey:item.cycle_key,scheduledFor:item.scheduled_for.toISOString(),observationPlanId:item.observation_plan_id,status:item.status})),
         } : null,
         realBrandOnboarding: onboardingRow ? {
           brandName: onboardingRow.package.brandName,

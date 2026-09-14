@@ -46,6 +46,8 @@ import { ComparableObservationRepository } from "../src/modules/observation-cycl
 import { buildOnboardingPackage, createIntakeSource } from "../src/modules/real-brand-onboarding/real-brand-onboarding.js";
 import { buildBenchmarkFactPack, buildBrandTruthDraftFromBenchmark } from "../src/modules/real-brand-onboarding/benchmark-fact-pack.js";
 import { RealBrandOnboardingRepository } from "../src/modules/real-brand-onboarding/real-brand-onboarding-repository.js";
+import { createDailyMonitoringSchedule, planScheduledCycle } from "../src/modules/periodic-monitoring/periodic-monitoring.js";
+import { PeriodicMonitoringRepository } from "../src/modules/periodic-monitoring/periodic-monitoring-repository.js";
 import {
   createObservationQueue,
   createObservationWorker,
@@ -798,6 +800,26 @@ try {
             if (poll===899) throw new Error("Jiacheng real observation timed out.");
             await delay(500);
           }
+          const periodicRepository = new PeriodicMonitoringRepository(realPool);
+          const scheduledFor = new Date().toISOString();
+          const schedule = await periodicRepository.createSchedule(createDailyMonitoringSchedule({ tenantId:realTenantId,panel:realPanel,nextRunAt:scheduledFor,
+            decisionReference:"Gate A confirmed by user on 2026-09-14: 北京珈程周期化监测、失败补采与自动复诊 V1",createdAt:scheduledFor }));
+          const scheduled = planScheduledCycle(schedule,realPanel,scheduledFor,new Date().toISOString());
+          await observationRepository.createPlan(scheduled.plan,scheduled.targets);
+          await periodicRepository.saveCycle(scheduled.cycle,scheduled.nextRunAt);
+          const periodicJobs=await Promise.all(scheduled.targets.map((target)=>enqueueObservation(producer.queue,observationJob(target))));
+          for(let poll=0;poll<900;poll++){
+            const states=await Promise.all(periodicJobs.map((job)=>job.getState()));
+            if(states.every((state)=>state==="completed"||state==="failed")) break;
+            if(poll===899) throw new Error("Jiacheng periodic acceptance cycle timed out.");
+            await delay(500);
+          }
+          for(let poll=0;poll<360;poll++){
+            const r=await withTenantTransaction(realPool,realTenantId,(client)=>client.query<{answers:string;scans:string;geo:string}>(`select (select count(*) from raw_answers)::text answers,(select count(*) from citation_scans)::text scans,(select count(*) from geo_analysis_runs where status='completed')::text geo`));
+            const x=r.rows[0]; if(x&&x.answers===x.scans&&x.answers===x.geo) break;
+            if(poll===359) throw new Error("Periodic answer evidence did not finish downstream analysis.");
+            await delay(500);
+          }
         } finally { await consumer.close(); await citations.close(); await geoIntelligence.close(); await geoDecisions.close(); await producer.close(); }
         let counts = { answers:"0", scans:"0", geo:"0" };
         for (let poll=0; poll<240; poll++) {
@@ -809,7 +831,10 @@ try {
         const realAnswers = await withTenantTransaction(realPool,realTenantId,(client)=>client.query<{count:string}>("select count(*)::text count from raw_answers"));
         if (realAnswers.rows[0]?.count !== counts.answers) throw new Error("Jiacheng answer count changed during finalization.");
         acceptanceTenantId = realTenantId;
-        console.log(`PASS: Beijing Jiacheng real baseline planned 40 DeepSeek API samples; answers=${counts.answers}, citationScans=${counts.scans}, geoAnalyses=${counts.geo}. Failures remain visible if any.`);
+        const periodicState=await new PeriodicMonitoringRepository(realPool).latestSchedule(realTenantId);
+        const periodicCycles=await new PeriodicMonitoringRepository(realPool).cycles(realTenantId);
+        if(!periodicState||periodicState.status!=="active"||periodicCycles.length!==1) throw new Error("Periodic monitoring schedule was not persisted idempotently.");
+        console.log(`PASS: Beijing Jiacheng baseline plus one periodic acceptance cycle completed; answers=${counts.answers}, citationScans=${counts.scans}, geoAnalyses=${counts.geo}. Failures remain visible if any.`);
       } finally { await realPool.end(); }
     }
   }

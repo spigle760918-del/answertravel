@@ -19,6 +19,7 @@ export async function provisionTestDatabase(adminUrl: string, password: string):
     // Extra mutation grants exercise append-only guards; production needs SELECT/INSERT only.
     await pool.query(`grant select, insert, update, delete, truncate on brand_truth_cards to ${pg.escapeIdentifier(role)}`);
     await pool.query(`grant select, insert, update, delete, truncate on brand_truth_quality_reports to ${pg.escapeIdentifier(role)}`);
+    await pool.query(`grant select, insert, update, delete, truncate on question_generation_runs, question_panels to ${pg.escapeIdentifier(role)}`);
     // Extra mutation grants exercise database triggers; production needs SELECT/INSERT only.
     await pool.query(`grant select, insert, update, delete, truncate on evidence_artifacts, audit_events to ${pg.escapeIdentifier(role)}`);
   } finally {

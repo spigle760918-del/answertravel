@@ -25,4 +25,14 @@ describe("foundation migration guardrails", () => {
     expect(sql).toContain("alter table brand_truth_quality_reports force row level security");
     expect(sql).toContain("create policy brand_truth_quality_reports_tenant_isolation");
   });
+
+  it("keeps question generation and panels immutable and tenant isolated", async () => {
+    const sql = await readFile(resolve(process.cwd(), "migrations/0005_question_intelligence.sql"), "utf8");
+    expect(sql).toContain("question_generation_runs_append_only");
+    expect(sql).toContain("question_panels_append_only");
+    expect(sql).toContain("question_generation_runs_no_truncate");
+    expect(sql).toContain("question_panels_no_truncate");
+    expect(sql).toContain("force row level security");
+    expect(sql).toContain("question_panels_tenant_isolation");
+  });
 });

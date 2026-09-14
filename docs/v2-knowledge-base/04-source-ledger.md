@@ -98,3 +98,10 @@
 - PostgreSQL：开发依赖 `embedded-postgres@16.14.0-beta.17`，仓库 `https://github.com/leinelissen/embedded-postgres`，包许可 MIT；Windows 原生包 gitHead `e7ffa21b913e96bdd6129f7c4f60f22f3942071c`，依赖完整性以 npm 锁文件为准。已复核安装脚本（Windows symlink 清单为空），独立执行报告 PostgreSQL 16.14；未借用 V1 包或数据。
 - Redis Windows 移植版：`https://github.com/redis-windows/redis-windows/releases/tag/7.2.16`，固定资产 `Redis-7.2.16-Windows-x64-msys2.zip`，GitHub asset ID `519261974`；发布页与 API 均给出 SHA-256 `bcbfda1dda027beaea4d616f8992f9b6353613c1b1f4d0e4a6776940bb036347`。仓库许可 Apache-2.0 不覆盖上游 Redis 和运行库各自许可；不复制其源码进入核心，不作为正式产品附带分发。
 - 已读 Redis 移植版该 tag README：明确非 Redis 官方项目，仅推荐本地开发，生产应使用 Linux。因此 Windows 测试不替代阿里云/Linux 验证。
+
+## 6. DeepSeek API
+
+- 官方文档：https://api-docs.deepseek.com/api/create-chat-completion
+- 2026-09-14 核验：Chat Completions 使用 `POST /chat/completions`；JSON Output 需要 `response_format: {"type":"json_object"}` 且 Prompt 必须明确要求 JSON；`finish_reason="length"` 代表输出可能被截断；响应提供模型和 token 用量字段。
+- 本地 R4 验证：使用隔离测试品牌和本地密钥真实调用 `deepseek-chat`，成功返回结构化问题候选；原始响应进入临时不可变证据仓，API Key 未进入证据、日志、代码或 Git。
+- 证据边界：该验证仅覆盖 DeepSeek API 文本生成，不证明联网搜索、引用、DeepSeek Web/App 可见度或真实品牌效果。

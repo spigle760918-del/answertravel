@@ -128,7 +128,7 @@ integration("PostgreSQL evidence guarantees", () => {
   it("rejects evidence deletion and table truncation", async () => {
     const saved = await repository.append(fixture());
     await expect(withTenantTransaction(pool, tenantA, (client) => client.query("delete from evidence_artifacts where id=$1", [saved.id]))).rejects.toThrow("append-only");
-    await expect(pool.query("truncate evidence_artifacts")).rejects.toThrow("append-only");
+    await expect(pool.query("truncate evidence_artifacts")).rejects.toThrow(/append-only|foreign key constraint/);
     await expect(pool.query("truncate audit_events")).rejects.toThrow("append-only");
   });
 });

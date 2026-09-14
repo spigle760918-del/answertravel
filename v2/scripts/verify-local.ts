@@ -11,6 +11,11 @@ import pg from "pg";
 import { provisionTestDatabase } from "./provision-test-database.js";
 import { createEvidenceEnvelope } from "../src/kernel/evidence-envelope.js";
 import { EvidenceRepository } from "../src/modules/evidence/evidence-repository.js";
+import { approveBrandTruth, createBrandTruthDraft } from "../src/modules/brand-truth/brand-truth.js";
+import { BrandTruthRepository } from "../src/modules/brand-truth/brand-truth-repository.js";
+import { DeepSeekQuestionGenerator } from "../src/modules/question-intelligence/deepseek-question-generator.js";
+import { QuestionIntelligenceRepository } from "../src/modules/question-intelligence/question-intelligence-repository.js";
+import { QuestionIntelligenceService } from "../src/modules/question-intelligence/question-intelligence-service.js";
 import { withTenantTransaction } from "../src/platform/database.js";
 import { createFoundationQueue, enqueueFoundationJob } from "../src/platform/foundation-queue.js";
 
@@ -21,6 +26,8 @@ const windows = process.platform === "win32";
 if (!windows && process.getuid?.() === 0) throw new Error("Native Linux tests must run as an unprivileged user.");
 const root = resolve(".");
 const databaseOnly = process.argv.includes("--database-only");
+const deepseekSmoke = process.argv.includes("--deepseek-smoke");
+if (deepseekSmoke && !process.env.DEEPSEEK_API_KEY) throw new Error("DEEPSEEK_API_KEY is required for the explicit real-provider smoke test.");
 const redisBinary = resolve(windows ? ".runtime/tools/redis-7.2.16/Redis-7.2.16-Windows-x64-msys2/redis-server.exe" : ".runtime/tools/redis-7.2.16/src/redis-server");
 const work = await mkdtemp(join(tmpdir(), "answertravel-v2-test-"));
 console.log(`Isolated test workspace: ${work}`);
@@ -130,6 +137,37 @@ try {
   const results = JSON.parse(await readFile(resultsPath, "utf8"));
   if (results.numFailedTests || results.numPendingTests || !results.numPassedTests) throw new Error("Verification requires passing tests without skips.");
   testSummary = { passed: results.numPassedTests, failed: results.numFailedTests, skipped: results.numPendingTests, resultsPath };
+
+  if (deepseekSmoke) {
+    const smokeTenantId = randomUUID(); const smokeCardId = randomUUID(); const smokeFactId = randomUUID();
+    const smokeAdmin = new pg.Pool({ connectionString: adminUrl });
+    try { await smokeAdmin.query("insert into tenants(id,slug,display_name) values ($1,$2,$3)",
+      [smokeTenantId, `deepseek-smoke-${smokeTenantId.slice(0, 8)}`, "DeepSeek provider test fixture"]); }
+    finally { await smokeAdmin.end(); }
+    const smokePool = new pg.Pool({ connectionString: appUrl });
+    try {
+      const truthRepository = new BrandTruthRepository(smokePool);
+      const draft = createBrandTruthDraft({ id: smokeCardId, tenantId: smokeTenantId, brandName: "远行测试旅行社", createdAt: new Date().toISOString(), facts: [
+        { id: smokeFactId, statement: "测试品牌提供适合六至十二岁儿童的云南亲子行程咨询", category: "service", status: "draft",
+          factLevel: "F0", public: true, visibility: "public", source: { type: "human", reference: "明确隔离的测试事实" } },
+      ] });
+      await truthRepository.create(draft, "deepseek-smoke-test");
+      const approved = await truthRepository.create(approveBrandTruth({ ...draft,
+        facts: draft.facts.map((fact) => ({ ...fact, status: "approved" as const })) }), "deepseek-smoke-test");
+      const service = new QuestionIntelligenceService(new DeepSeekQuestionGenerator({ apiKey: process.env.DEEPSEEK_API_KEY!, timeoutMs: 60_000 }),
+        new EvidenceRepository(smokePool), new QuestionIntelligenceRepository(smokePool));
+      const panel = await service.generateDraft({ id: randomUUID(), tenantId: smokeTenantId, panelId: randomUUID(), brandAliases: [],
+        destinations: ["云南"], competitors: ["同行测试旅行社"], seedQuestions: ["云南亲子旅行怎么规划？"], requestedTotal: 8,
+        promptVersion: "question-expansion.v1", createdAt: new Date().toISOString() }, approved, ["绝对保证", "零风险"]);
+      if (!panel.candidates.length || !panel.candidates.some((candidate) => candidate.included)) {
+        throw new Error("Real DeepSeek response produced no eligible question candidates.");
+      }
+      const evidenceCount = await withTenantTransaction(smokePool, smokeTenantId, (client) => client.query<{ count: string }>(
+        "select count(*)::text as count from evidence_artifacts where artifact_type='question_generation.deepseek_response'"));
+      if (evidenceCount.rows[0]?.count !== "1") throw new Error("Real DeepSeek response evidence was not persisted exactly once.");
+      console.log(`PASS: Real DeepSeek API generated ${panel.candidates.length} candidates; ${panel.mix.actualTotal} passed deterministic gates. Raw response stored only in the isolated test database.`);
+    } finally { await smokePool.end(); }
+  }
 
   const tenantId = randomUUID();
   const admin = new pg.Pool({ connectionString: adminUrl });

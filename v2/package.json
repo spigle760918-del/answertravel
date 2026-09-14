@@ -14,6 +14,7 @@
     "test:watch": "vitest",
     "check:integration": "npm run check:runtime && npm run check:types && tsx scripts/check-integration.ts",
     "verify:local": "tsx scripts/verify-local.ts",
+    "verify:deepseek": "tsx scripts/verify-local.ts --deepseek-smoke",
     "db:provision-test": "tsx scripts/provision-test-database.ts",
     "db:migrate": "tsx scripts/migrate.ts",
     "dev:api": "tsx watch src/main.ts",

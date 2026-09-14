@@ -1,6 +1,6 @@
 # 问题智能意图卡：AI 游客问题拓展与版本化问题组
 
-状态：Gate A 待用户确认
+状态：Gate A/B/C 已通过，Gate D 本地自动评测通过，待 Linux CI 与 Gate E 业务验收
 日期：2026-09-14
 
 ## 用户问题
@@ -73,3 +73,33 @@
 3. 实现真实 DeepSeek 拓题、版本化存储、租户隔离、审计和批量审核最小切片；
 4. 完成本地隔离测试、Linux CI 和业务验收；
 5. 未经 Gate A 确认不得编码，未经 Gate E 确认不得进入真实答案采集模块。
+
+## Gate A 确认
+
+- 2026-09-14，用户明确回复 `YES`，同意按本意图卡进入实现。
+
+## Gate B/C 实现证据
+
+- `v2/src/modules/question-intelligence/question-intelligence.ts`：问题候选、四类对象、旅前阶段、问题组角色、去重映射、实际配比、问题组草稿与审核新版本契约；
+- `v2/src/modules/question-intelligence/deepseek-question-generator.ts`：DeepSeek Chat Completions、JSON 输出、超时、429/5xx 重试、截断/无效响应失败分类；
+- `v2/src/modules/question-intelligence/question-intelligence-service.ts`：仅公开且已审核品牌事实进入 Prompt，成功和失败均保存不可变证据，不保存 API Key；
+- `v2/src/modules/question-intelligence/question-intelligence-repository.ts`：生成运行与问题组版本的租户事务、持久化和审计；
+- `v2/migrations/0005_question_intelligence.sql`：品牌真相/证据外键、不可变生成运行、不可变问题组、RLS 和租户索引；
+- 品牌正式名称与别名均参与对象类型校验；中性、品牌、竞品和品牌对比问题不能因 AI 错标而混入错误统计口径；
+- 使用明确标注为测试用途的虚构品牌，真实 DeepSeek API 返回 9 个候选，8 个通过确定性门禁；原始响应保存于隔离临时 PostgreSQL，未提交到仓库；
+- 真实 API 验证证明 Provider 调用链可运行，不代表真实业务品牌问题组已经生成，也不代表 DeepSeek Web/App 搜索终端表现。
+
+## Gate D 本地验证证据
+
+- 快速类型、契约与架构测试：7 个测试文件、32 项通过；
+- 首次完整验证发现新增证据外键使旧清空测试先触发外键保护；修正过窄断言后完整回归通过，失败证据保留；
+- 最终完整隔离验证：14 个测试文件、67 项通过，0 失败、0 跳过；
+- PostgreSQL 16.14 冷备恢复通过，Redis 7.2.16 AOF 进程终止恢复通过；
+- 真实 DeepSeek 冒烟验证与完整测试同轮通过，证据目录：`C:\Users\ADMINI~1\AppData\Local\Temp\answertravel-v2-test-HIvwXR`；
+- Linux CI 尚未运行，当前不得表述为跨平台验证通过。
+
+## 下一门禁
+
+1. 提交并推送当前切片，运行 GitHub Linux CI；
+2. CI 成功后向用户展示问题智能的业务结果与当前限制；
+3. 用户通过 Gate E 后封版，才可进入 DeepSeek 真实答案采集切片。

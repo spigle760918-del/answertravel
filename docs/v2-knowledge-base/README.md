@@ -32,7 +32,8 @@
 | `12-server-preflight.md` | 宝塔现有服务与资源只读核查、隔离测试准备 | 已核查，临时测试待执行 |
 | `13-brand-truth-intent-card.md` | 品牌事实卡最小切片的范围、证据与验收 | Gate A-F 已通过并封版 |
 | `14-brand-truth-quality-intent-card.md` | 品牌事实冲突、缺口与公开范围 | Gate A-F 已通过并封版 |
-| `15-question-intelligence-intent-card.md` | AI 游客问题拓展与版本化问题组 | Gate A 待用户确认 |
+| `15-question-intelligence-intent-card.md` | AI 游客问题拓展与版本化问题组 | Gate A-F 已通过并封版 |
+| `16-deepseek-observation-intent-card.md` | DeepSeek API 真实答案采集与不可变证据 | Gate A 待用户确认 |
 
 ## 事实分级
 

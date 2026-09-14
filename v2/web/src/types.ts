@@ -188,6 +188,7 @@ export type Overview = {
     conflicts: string[];
     gaps: string[];
     readyForApproval: boolean;
+    truthDraft: { status: "draft"; publicCandidateCount: number; excludedCount: number; note: string };
   };
   limitations: string[];
 };

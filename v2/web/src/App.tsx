@@ -225,6 +225,7 @@ export default function App() {
                   <article className="panel"><p className="eyebrow">资料缺口</p><h2>现在不能由 AI 猜测的内容</h2><ul>{data.realBrandOnboarding.gaps.map((item)=><li key={item}>{item}</li>)}</ul>{data.realBrandOnboarding.conflicts.length?<><h3>冲突候选</h3><ul>{data.realBrandOnboarding.conflicts.map((item)=><li key={item}>{item}</li>)}</ul></>:null}</article>
                 </section>
                 <section className="decision-grid">
+                  <article className="panel"><p className="eyebrow">品牌真相候选草案</p><h2>公开候选 {data.realBrandOnboarding.truthDraft.publicCandidateCount} 条</h2><p>{data.realBrandOnboarding.truthDraft.note}</p><p>排除或待核验 {data.realBrandOnboarding.truthDraft.excludedCount} 条。后续资料可追加新版本，不覆盖历史版本。</p></article>
                   <article className="panel"><p className="eyebrow">竞品范围</p><h2>{data.realBrandOnboarding.competitors.length ? "待确认竞品" : "尚未提供竞品"}</h2>{data.realBrandOnboarding.competitors.length?<ul>{data.realBrandOnboarding.competitors.map((item)=><li key={item.name}>{item.name}</li>)}</ul>:<p className="empty">不会从行业常识中替你猜竞品。</p>}</article>
                   <article className="panel"><p className="eyebrow">历史问题种子</p><h2>{data.realBrandOnboarding.seedQuestions.length} 条待复核问题</h2><ul>{data.realBrandOnboarding.seedQuestions.map((item)=><li key={item.text}>{item.text} <small>· {item.group}</small></li>)}</ul></article>
                 </section>

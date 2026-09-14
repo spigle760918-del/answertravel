@@ -1,0 +1,45 @@
+import { z } from "zod";
+
+export const benchmarkFactSchema = z.object({
+  statement: z.string().min(1), category: z.enum(["identity", "product", "service", "restriction"]),
+  source: z.string().min(1), evidence: z.enum(["official_registry", "licensed_platform", "self_reported", "user_provided"]),
+  visibility: z.enum(["public", "internal", "restricted", "undetermined"]), accepted: z.boolean(),
+});
+export const benchmarkPackSchema = z.object({
+  brandName: z.literal("北京珈程国际旅行社有限公司"), capturedAt: z.string().datetime({ offset: true }),
+  facts: z.array(benchmarkFactSchema), contradictions: z.array(z.string()), forbiddenExpressions: z.array(z.string()),
+  uncertainSignals: z.array(z.string()), sourceNote: z.string(),
+});
+export type BenchmarkFactPack = z.infer<typeof benchmarkPackSchema>;
+
+export function buildBenchmarkFactPack(capturedAt = new Date().toISOString()): BenchmarkFactPack {
+  return benchmarkPackSchema.parse({
+    brandName: "北京珈程国际旅行社有限公司", capturedAt,
+    facts: [
+      { statement:"工商登记名称为北京珈程国际旅行社有限公司", category:"identity", source:"用户提供：国家企业信用信息公示系统", evidence:"official_registry", visibility:"public", accepted:true },
+      { statement:"统一社会信用代码为91110112MAE7E8FC0K", category:"identity", source:"用户提供：国家企业信用信息公示系统", evidence:"official_registry", visibility:"restricted", accepted:false },
+      { statement:"工商登记成立日期为2024年12月06日", category:"identity", source:"用户提供：国家企业信用信息公示系统", evidence:"official_registry", visibility:"public", accepted:true },
+      { statement:"注册资本为30万元人民币", category:"identity", source:"用户提供：工商/商业信息核验资料", evidence:"official_registry", visibility:"public", accepted:true },
+      { statement:"法定代表人为齐正春", category:"identity", source:"用户提供：工商登记", evidence:"official_registry", visibility:"restricted", accepted:false },
+      { statement:"企业类型为有限责任公司（自然人独资）", category:"identity", source:"用户提供：工商登记", evidence:"official_registry", visibility:"public", accepted:true },
+      { statement:"经营状态为存续", category:"identity", source:"用户提供：工商登记", evidence:"official_registry", visibility:"public", accepted:true },
+      { statement:"持有旅行社业务经营许可证L-BJ10127", category:"service", source:"用户提供：欣欣旅游认证页", evidence:"licensed_platform", visibility:"public", accepted:true },
+      { statement:"许可经营业务为国内旅游业务、入境旅游业务", category:"service", source:"用户提供：欣欣旅游认证页", evidence:"licensed_platform", visibility:"public", accepted:true },
+      { statement:"旅游质量保证金已缴纳，但具体金额仅为企业自述，未获第三方核验", category:"restriction", source:"用户提供：企业自述", evidence:"self_reported", visibility:"undetermined", accepted:false },
+      { statement:"在欣欣旅游平台存在资质认证有效至2028年的店铺记录", category:"service", source:"用户提供：欣欣旅游认证页", evidence:"licensed_platform", visibility:"public", accepted:true },
+      { statement:"在售北京5天4晚经典游，12人精品小团，价格2280至2480元，门市价2580元", category:"product", source:"用户提供：欣欣旅游网店", evidence:"licensed_platform", visibility:"public", accepted:true },
+      { statement:"该产品包含故宫、天安门广场、八达岭长城、颐和园、天坛等景点，含接送站、住宿、部分餐食和导游", category:"product", source:"用户提供：欣欣旅游网店", evidence:"licensed_platform", visibility:"public", accepted:true },
+      { statement:"该产品页面标注纯玩0购物0自费，但需以正式合同为准", category:"restriction", source:"用户提供：欣欣旅游网店/合同提示", evidence:"licensed_platform", visibility:"public", accepted:true },
+    ],
+    contradictions: [
+      "成立日期为2024年12月06日，与‘成立13年/深耕20年/前身2005年’互相矛盾",
+      "社保参保人数为0的用户资料，与‘256人导游团队/百人定制师’不能同时作为已核验事实",
+      "未发现官方来源支持5A级旅行社，与‘5A级旅行社’互相矛盾",
+      "‘连续五年零投诉’与成立时间不足两年不具备可比统计基础",
+      "‘年服务10万人次/累计100万+人次’当前无公开证据支持",
+    ],
+    forbiddenExpressions: ["5A级旅行社","深耕北京旅游13年","成立13年","前身2005年","256人持证导游团队","500+车辆","百人定制师","年服务游客超10万人次","累计100万+人次","连续五年零投诉","行业口碑榜首","全网最低","绝对安全"],
+    uncertainSignals: ["独立官网未发现：只能表示本次资料检索未发现，不等同于证明不存在","网易号‘小家漫漫旅程’标注官方企业号，但IP属地新疆且关联性存疑","百度百科存在，但具体页面内容和更新时间仍需独立快照核验","行政处罚记录无、经营异常名录无均需保留查询日期"],
+    sourceNote: "本包由用户于2026-09-14提供，以上均为待批准基准资料；未批准字段不得进入生产品牌真相。",
+  });
+}

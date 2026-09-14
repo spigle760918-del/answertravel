@@ -17,4 +17,12 @@ describe("foundation migration guardrails", () => {
     expect(sql).toContain("create policy evidence_tenant_isolation");
     expect(sql).toContain("create policy audit_tenant_isolation");
   });
+
+  it("keeps brand truth quality reports immutable and tenant isolated", async () => {
+    const sql = await readFile(resolve(process.cwd(), "migrations/0004_brand_truth_quality.sql"), "utf8");
+    expect(sql).toContain("brand_truth_quality_reports_append_only");
+    expect(sql).toContain("brand_truth_quality_reports_no_truncate");
+    expect(sql).toContain("alter table brand_truth_quality_reports force row level security");
+    expect(sql).toContain("create policy brand_truth_quality_reports_tenant_isolation");
+  });
 });

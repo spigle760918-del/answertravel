@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const truthStatusSchema = z.enum(["draft", "approved", "rejected"]);
 export const factLevelSchema = z.enum(["F0", "F1"]);
+export const visibilityScopeSchema = z.enum(["public", "internal", "restricted", "undetermined"]);
 
 export const brandFactSchema = z.object({
   id: z.string().uuid(),
@@ -10,6 +11,9 @@ export const brandFactSchema = z.object({
   status: truthStatusSchema,
   factLevel: factLevelSchema,
   public: z.boolean(),
+  visibility: visibilityScopeSchema.optional(),
+  subject: z.string().trim().min(1).max(200).optional(),
+  attribute: z.string().trim().min(1).max(200).optional(),
   source: z.object({ type: z.enum(["human", "official"]), reference: z.string().trim().min(1).max(2000) }),
 });
 

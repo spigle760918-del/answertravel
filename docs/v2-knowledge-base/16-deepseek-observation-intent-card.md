@@ -1,6 +1,6 @@
 # 观察编排意图卡：DeepSeek API 真实答案采集与不可变证据
 
-状态：Gate A 待用户确认
+状态：Gate A/B/C 已通过，Gate D 本地自动评测通过，待 Linux CI 与 Gate E 业务验收
 日期：2026-09-14
 
 ## 用户问题
@@ -67,3 +67,34 @@
 3. 实现 PostgreSQL 状态、BullMQ 持久任务、DeepSeek Adapter 和不可变证据的最小真实路径；
 4. 使用隔离测试问题组完成真实 DeepSeek 多问题采样，本地完整测试与 Linux CI；
 5. 未经 Gate A 确认不得编码，未经 Gate E 确认不得进入基础 GEO 情报计算。
+
+## Gate A 确认
+
+- 2026-09-14，用户明确回复 `YES`，同意按本意图卡进入实现；用户询问是否需再次提供 DeepSeek API，系统核验已有本地忽略配置可安全复用，因此未要求重复传输密钥。
+
+## Gate B/C 实现证据
+
+- `v2/src/modules/observation/observation.ts`：采样规则、计划、问题×轮次目标、幂等键、尝试和原始回答契约；
+- `v2/src/modules/observation/deepseek-answer-client.ts`：DeepSeek API 原始正文采集、超时、HTTP/协议/截断/空正文分类，认证信息不进入请求证据；
+- `v2/src/modules/observation/observation-repository.ts`：计划、目标、尝试与答案的租户事务、预算用量和审计；
+- `v2/src/modules/observation/observation-queue.ts`：BullMQ 持久任务、确定性 Job ID、失败重试、预算停止、成功幂等回放和单 Worker Alpha 并发；
+- `v2/migrations/0006_observations.sql`：计划/目标/尝试/回答外键、唯一有效回答、不可变保护、RLS 和索引；
+- `v2/src/worker.ts`：仅在安全注入 DeepSeek Key 时启动观察 Worker；无密钥不伪造采集能力；
+- 使用隔离测试问题组真实执行 2 个问题 × 2 轮，共 4 次 DeepSeek API 采集，四条不可变答案与尝试记录全部保存；
+- 真实验证只代表 DeepSeek API 文本终端，不代表 DeepSeek Web/App、联网搜索或引用能力。
+
+## Gate D 本地验证证据
+
+- 补强 DeepSeek 完整/截断/空正文/429/400 合约后，最终完整隔离验证：17 个测试文件、76 项通过，0 失败、0 跳过；
+- 自动测试覆盖 429 重试后成功、失败尝试保留、单目标唯一有效答案、任务重投幂等、累计 token 预算停止、跨表外键、RLS 与不可变保护；
+- 第一次真实 2×2 验证在第 3 个随机开放问题失败；第二次在第 4 个随机开放问题明确返回 `finish_reason=length`，均被正确判为无效且未冒充通过；
+- 将观察链路冒烟问题改为两个固定、简短、明确测试用途的问题后，第三次 2×2 真实验证四条全部成功；没有降低截断判废标准；
+- PostgreSQL 16.14 冷备恢复和 Redis 7.2.16 AOF 进程终止恢复通过；
+- 真实 2×2 DeepSeek 成功证据目录：`C:\Users\ADMINI~1\AppData\Local\Temp\answertravel-v2-test-d0m7zO`；最终 76 项自动测试证据目录：`C:\Users\ADMINI~1\AppData\Local\Temp\answertravel-v2-test-Xb2Ocl`；
+- Linux CI 尚未运行，当前不得表述为跨平台验证通过。
+
+## 下一门禁
+
+1. 提交并推送当前切片，运行 GitHub Linux CI；
+2. CI 成功后向用户展示答案采集业务结果、失败边界与限制；
+3. 用户通过 Gate E 后封版，才可进入基础 GEO 情报计算。

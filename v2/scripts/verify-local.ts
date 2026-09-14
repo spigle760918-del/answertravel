@@ -16,6 +16,10 @@ import { BrandTruthRepository } from "../src/modules/brand-truth/brand-truth-rep
 import { DeepSeekQuestionGenerator } from "../src/modules/question-intelligence/deepseek-question-generator.js";
 import { QuestionIntelligenceRepository } from "../src/modules/question-intelligence/question-intelligence-repository.js";
 import { QuestionIntelligenceService } from "../src/modules/question-intelligence/question-intelligence-service.js";
+import { approveQuestionPanel, questionPanelSchema } from "../src/modules/question-intelligence/question-intelligence.js";
+import { createObservationPlan } from "../src/modules/observation/observation.js";
+import { ObservationRepository } from "../src/modules/observation/observation-repository.js";
+import { createObservationQueue, createObservationWorker, enqueueObservation, observationJob } from "../src/modules/observation/observation-queue.js";
 import { withTenantTransaction } from "../src/platform/database.js";
 import { createFoundationQueue, enqueueFoundationJob } from "../src/platform/foundation-queue.js";
 
@@ -154,8 +158,9 @@ try {
       await truthRepository.create(draft, "deepseek-smoke-test");
       const approved = await truthRepository.create(approveBrandTruth({ ...draft,
         facts: draft.facts.map((fact) => ({ ...fact, status: "approved" as const })) }), "deepseek-smoke-test");
+      const questionRepository = new QuestionIntelligenceRepository(smokePool);
       const service = new QuestionIntelligenceService(new DeepSeekQuestionGenerator({ apiKey: process.env.DEEPSEEK_API_KEY!, timeoutMs: 60_000 }),
-        new EvidenceRepository(smokePool), new QuestionIntelligenceRepository(smokePool));
+        new EvidenceRepository(smokePool), questionRepository);
       const panel = await service.generateDraft({ id: randomUUID(), tenantId: smokeTenantId, panelId: randomUUID(), brandAliases: [],
         destinations: ["云南"], competitors: ["同行测试旅行社"], seedQuestions: ["云南亲子旅行怎么规划？"], requestedTotal: 8,
         promptVersion: "question-expansion.v1", createdAt: new Date().toISOString() }, approved, ["绝对保证", "零风险"]);
@@ -166,6 +171,41 @@ try {
         "select count(*)::text as count from evidence_artifacts where artifact_type='question_generation.deepseek_response'"));
       if (evidenceCount.rows[0]?.count !== "1") throw new Error("Real DeepSeek response evidence was not persisted exactly once.");
       console.log(`PASS: Real DeepSeek API generated ${panel.candidates.length} candidates; ${panel.mix.actualTotal} passed deterministic gates. Raw response stored only in the isolated test database.`);
+      const smokePanelId = randomUUID(); const firstQuestionId = randomUUID(); const secondQuestionId = randomUUID();
+      const smokePanel = questionPanelSchema.parse({ id: smokePanelId, tenantId: smokeTenantId, version: 1, status: "draft",
+        brandTruthCardId: approved.id, brandTruthVersion: approved.version, generationRunId: panel.generationRunId, createdAt: new Date().toISOString(), candidates: [
+          { id: firstQuestionId, text: "云南亲子五日游通常如何安排？请简要回答。", journeyStage: "planning", objectType: "neutral_category",
+            panelRole: "baseline", intentCluster: "行程规划", audience: "亲子家庭", scenario: "云南五日游", supportingFactIds: [], rationale: "稳定采集测试",
+            rawIndex: 0, included: true, canonicalCandidateId: firstQuestionId, exclusionReason: null },
+          { id: secondQuestionId, text: "选择亲子旅行社时应核对哪些服务信息？请简要回答。", journeyStage: "risk_confirmation", objectType: "neutral_category",
+            panelRole: "baseline", intentCluster: "服务核验", audience: "亲子家庭", scenario: "出发前", supportingFactIds: [], rationale: "稳定采集测试",
+            rawIndex: 1, included: true, canonicalCandidateId: secondQuestionId, exclusionReason: null },
+        ], mix: { requestedTotal: 2, actualTotal: 2, baseline: { target: 2, actual: 2 }, exploration: { target: 0, actual: 0 }, trigger: { target: 0, actual: 0 } } });
+      await questionRepository.createPanel(smokePanel, "deepseek-smoke-test");
+      const approvedPanel = await questionRepository.createPanel(approveQuestionPanel(smokePanel, [], new Date().toISOString()), "deepseek-smoke-test");
+      const observationRepository = new ObservationRepository(smokePool);
+      const observation = createObservationPlan({ id: randomUUID(), panel: approvedPanel, rules: { version: "deepseek-sampling.v1", rounds: 2,
+        language: "简体中文", regionContext: "中国大陆测试语境", temperature: 0.2, maxTokens: 1200, timeoutMs: 60_000,
+        maxAttempts: 3, maxTotalTokens: 20_000 }, createdAt: new Date().toISOString() });
+      await observationRepository.createPlan(observation.plan, observation.targets);
+      const producer = createObservationQueue(redisUrl); const consumer = createObservationWorker(redisUrl, smokePool, process.env.DEEPSEEK_API_KEY!);
+      try {
+        await consumer.worker.waitUntilReady();
+        const jobs = await Promise.all(observation.targets.map((target) => enqueueObservation(producer.queue, observationJob(target))));
+        for (let poll = 0; poll < 240; poll++) {
+          const states = await Promise.all(jobs.map((job) => job.getState()));
+          if (states.every((state) => state === "completed")) break;
+          if (states.some((state) => state === "failed")) {
+            const reasons = await Promise.all(jobs.map(async (job, index) => ({ index, state: states[index], reason: (await producer.queue.getJob(job.id!))?.failedReason ?? null })));
+            throw new Error(`Real observation job failed: ${JSON.stringify(reasons)}`);
+          }
+          if (poll === 239) throw new Error("Real observation jobs timed out.");
+          await delay(500);
+        }
+      } finally { await consumer.close(); await producer.close(); }
+      const answerCount = await withTenantTransaction(smokePool, smokeTenantId, (client) => client.query<{ count: string }>("select count(*)::text as count from raw_answers"));
+      if (answerCount.rows[0]?.count !== "4") throw new Error("Real DeepSeek observation smoke test did not persist exactly four answers.");
+      console.log("PASS: Real DeepSeek API completed 2 questions x 2 rounds; four immutable API answers and attempt records were stored in the isolated database.");
     } finally { await smokePool.end(); }
   }
 

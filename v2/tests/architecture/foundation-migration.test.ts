@@ -35,4 +35,6 @@ describe("foundation migration guardrails", () => {
     expect(sql).toContain("force row level security");
     expect(sql).toContain("question_panels_tenant_isolation");
   });
+  it("keeps observation plans, attempts and raw answers append-only",async()=>{const sql=await readFile(resolve(process.cwd(),"migrations/0006_observations.sql"),"utf8");
+    expect(sql).toContain("observation_attempts");expect(sql).toContain("raw_answers");expect(sql).toContain("reject_immutable_mutation");expect(sql).toContain("force row level security");});
 });

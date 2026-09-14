@@ -428,11 +428,11 @@ try {
       const benchmarkPack = buildBenchmarkFactPack();
       const historicalSource = createIntakeSource({ tenantId:smokeTenantId,sourceType:"file",reference:"用户提交：北京珈程国际旅行社 GEO检测基准事实包（待审核）",capturedAt:benchmarkPack.capturedAt,sensitive:true,content:benchmarkPack });
       await new RealBrandOnboardingRepository(smokePool).create(buildOnboardingPackage({ tenantId:smokeTenantId,brandName:"北京珈程国际旅行社",source:historicalSource,
-        facts:benchmarkPack.facts.map((fact)=>({statement:fact.statement,category:fact.category,factLevel:"F0" as const,visibility:fact.visibility,confidence:fact.accepted?"high" as const:"low" as const,needsHumanConfirmation:true})),competitors:[],seedQuestions:[
+        facts:benchmarkPack.facts.map((fact)=>({statement:fact.statement,category:fact.category,factLevel:"F0" as const,visibility:fact.visibility,confidence:fact.accepted?"high" as const:"low" as const,needsHumanConfirmation:true})),competitors:benchmarkPack.competitors.map((competitor)=>({name:competitor.name,aliases:competitor.aliases,needsHumanConfirmation:!competitor.confirmedForMonitoring})),seedQuestions:[
           {text:"大理三天两夜怎么安排路线和住宿？",group:"路线规划"},{text:"雨季去云南旅游安全吗？需要准备什么？",group:"出行安全"},
           {text:"云南 5 天游玩路线如何安排更省时间？",group:"路线规划"},{text:"第一次去云南，哪些景点最值得安排？",group:"旅行体验"},
           {text:"带孩子去云南适合自由行还是跟团？",group:"旅行体验"},
-        ],gaps:["基准事实包尚未逐条批准","缺少主要竞品名称与别名","缺少服务流程和适用人群","缺少可验证差异化能力","缺少公开范围、敏感信息和禁用表达"],
+        ],gaps:["基准事实包尚未逐条批准","缺少服务流程和适用人群的企业确认","缺少可验证差异化能力","公开范围仍待品牌真相 Gate E 批准"],
         conflicts:benchmarkPack.contradictions }));
       const questionRepository = new QuestionIntelligenceRepository(smokePool);
       const service = new QuestionIntelligenceService(

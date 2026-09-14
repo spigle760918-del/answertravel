@@ -10,7 +10,7 @@ export const benchmarkFactSchema = z.object({
 export const benchmarkPackSchema = z.object({
   brandName: z.literal("北京珈程国际旅行社有限公司"), capturedAt: z.string().datetime({ offset: true }),
   facts: z.array(benchmarkFactSchema), contradictions: z.array(z.string()), forbiddenExpressions: z.array(z.string()),
-  uncertainSignals: z.array(z.string()), sourceNote: z.string(),
+  uncertainSignals: z.array(z.string()), competitors: z.array(z.object({ name: z.string().min(1), aliases: z.array(z.string()), reason: z.string().min(1), confirmedForMonitoring: z.boolean() })), sourceNote: z.string(),
 });
 export type BenchmarkFactPack = z.infer<typeof benchmarkPackSchema>;
 
@@ -68,6 +68,11 @@ export function buildBenchmarkFactPack(capturedAt = new Date().toISOString()): B
     ],
     forbiddenExpressions: ["5A级旅行社","深耕北京旅游13年","成立13年","前身2005年","256人持证导游团队","500+车辆","百人定制师","年服务游客超10万人次","累计100万+人次","连续五年零投诉","行业口碑榜首","全网最低","绝对安全"],
     uncertainSignals: ["用户提供 https://www.jiacheng666.com/，尚未完成独立抓取、主体关联、HTTPS与内容快照核验","网易号‘小家漫漫旅程’标注官方企业号，但IP属地新疆且关联性存疑","百度百科存在，但具体页面内容和更新时间仍需独立快照核验","官网‘京小团’品牌归属及销量/满意度数据暂无第三方交叉证据","行政处罚记录无、经营异常名录无均需保留查询日期"],
+    competitors: [
+      { name:"北青美途（北京）旅行社", aliases:[], reason:"用户指定纳入北京本地旅行社 GEO 监控范围", confirmedForMonitoring:true },
+      { name:"北京途开心文化旅游", aliases:[], reason:"用户指定纳入北京本地旅行社 GEO 监控范围", confirmedForMonitoring:true },
+      { name:"泛海国际旅行社", aliases:[], reason:"用户指定纳入北京本地旅行社 GEO 监控范围", confirmedForMonitoring:true },
+    ],
     sourceNote: "本包由用户于2026-09-14提供，以上均为待批准基准资料；未批准字段不得进入生产品牌真相。",
   });
 }

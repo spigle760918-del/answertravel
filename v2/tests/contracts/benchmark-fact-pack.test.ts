@@ -21,4 +21,10 @@ describe("benchmark fact pack",()=>{
     expect(card.facts.every((fact)=>fact.status==="draft"&&fact.public&&fact.visibility==="public")).toBe(true);
     expect(card.facts.some((fact)=>fact.statement.includes("91110112"))).toBe(false);
   });
+  it("keeps user-confirmed competitors as monitoring entities only",()=>{
+    const pack=buildBenchmarkFactPack();
+    expect(pack.competitors.map((item)=>item.name)).toEqual(["北青美途（北京）旅行社","北京途开心文化旅游","泛海国际旅行社"]);
+    expect(pack.competitors.every((item)=>item.confirmedForMonitoring)).toBe(true);
+    expect(new Set(pack.competitors.map((item)=>item.name)).size).toBe(pack.competitors.length);
+  });
 });

@@ -52,6 +52,29 @@ export type Overview = {
       capturedAt: string;
       tokens: number;
       attempts: number;
+      citationEvidence: {
+        scanStatus: "pending" | "completed" | "failed";
+        candidateCount: number;
+        events: Array<{
+          id: string;
+          kind: string;
+          rawUrl: string | null;
+          canonicalUrl: string | null;
+          domain: string | null;
+          evidenceStatus: string;
+          snapshot: null | {
+            status: string;
+            httpStatus: number | null;
+            title: string | null;
+            author: string | null;
+            publishedAt: string | null;
+            textExcerpt: string | null;
+            contentSha256: string | null;
+            errorCode: string | null;
+            capturedAt: string;
+          };
+        }>;
+      };
     }>;
     failures: Array<{
       question: string;

@@ -4,30 +4,50 @@ import { describe, expect, it } from "vitest";
 
 describe("foundation migration guardrails", () => {
   it("enforces append-only evidence and audit rows", async () => {
-    const sql = await readFile(resolve(process.cwd(), "migrations/0001_foundation.sql"), "utf8");
+    const sql = await readFile(
+      resolve(process.cwd(), "migrations/0001_foundation.sql"),
+      "utf8",
+    );
     expect(sql).toContain("evidence_artifacts_append_only");
     expect(sql).toContain("audit_events_append_only");
     expect(sql).toContain("reject_immutable_mutation");
   });
 
   it("enables tenant row-level security", async () => {
-    const sql = await readFile(resolve(process.cwd(), "migrations/0001_foundation.sql"), "utf8");
-    expect(sql).toContain("alter table evidence_artifacts enable row level security");
-    expect(sql).toContain("alter table evidence_artifacts force row level security");
+    const sql = await readFile(
+      resolve(process.cwd(), "migrations/0001_foundation.sql"),
+      "utf8",
+    );
+    expect(sql).toContain(
+      "alter table evidence_artifacts enable row level security",
+    );
+    expect(sql).toContain(
+      "alter table evidence_artifacts force row level security",
+    );
     expect(sql).toContain("create policy evidence_tenant_isolation");
     expect(sql).toContain("create policy audit_tenant_isolation");
   });
 
   it("keeps brand truth quality reports immutable and tenant isolated", async () => {
-    const sql = await readFile(resolve(process.cwd(), "migrations/0004_brand_truth_quality.sql"), "utf8");
+    const sql = await readFile(
+      resolve(process.cwd(), "migrations/0004_brand_truth_quality.sql"),
+      "utf8",
+    );
     expect(sql).toContain("brand_truth_quality_reports_append_only");
     expect(sql).toContain("brand_truth_quality_reports_no_truncate");
-    expect(sql).toContain("alter table brand_truth_quality_reports force row level security");
-    expect(sql).toContain("create policy brand_truth_quality_reports_tenant_isolation");
+    expect(sql).toContain(
+      "alter table brand_truth_quality_reports force row level security",
+    );
+    expect(sql).toContain(
+      "create policy brand_truth_quality_reports_tenant_isolation",
+    );
   });
 
   it("keeps question generation and panels immutable and tenant isolated", async () => {
-    const sql = await readFile(resolve(process.cwd(), "migrations/0005_question_intelligence.sql"), "utf8");
+    const sql = await readFile(
+      resolve(process.cwd(), "migrations/0005_question_intelligence.sql"),
+      "utf8",
+    );
     expect(sql).toContain("question_generation_runs_append_only");
     expect(sql).toContain("question_panels_append_only");
     expect(sql).toContain("question_generation_runs_no_truncate");
@@ -35,6 +55,25 @@ describe("foundation migration guardrails", () => {
     expect(sql).toContain("force row level security");
     expect(sql).toContain("question_panels_tenant_isolation");
   });
-  it("keeps observation plans, attempts and raw answers append-only",async()=>{const sql=await readFile(resolve(process.cwd(),"migrations/0006_observations.sql"),"utf8");
-    expect(sql).toContain("observation_attempts");expect(sql).toContain("raw_answers");expect(sql).toContain("reject_immutable_mutation");expect(sql).toContain("force row level security");});
+  it("keeps observation plans, attempts and raw answers append-only", async () => {
+    const sql = await readFile(
+      resolve(process.cwd(), "migrations/0006_observations.sql"),
+      "utf8",
+    );
+    expect(sql).toContain("observation_attempts");
+    expect(sql).toContain("raw_answers");
+    expect(sql).toContain("reject_immutable_mutation");
+    expect(sql).toContain("force row level security");
+  });
+  it("keeps citation scans, events and source snapshots append-only and tenant isolated", async () => {
+    const sql = await readFile(
+      resolve(process.cwd(), "migrations/0007_citation_source_evidence.sql"),
+      "utf8",
+    );
+    expect(sql).toContain("citation_scans");
+    expect(sql).toContain("citation_events");
+    expect(sql).toContain("source_snapshots");
+    expect(sql).toContain("reject_immutable_mutation");
+    expect(sql).toContain("force row level security");
+  });
 });

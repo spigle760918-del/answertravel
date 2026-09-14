@@ -1,17 +1,238 @@
-import type pg from "pg";import {createAuditEvent} from "../../kernel/audit-event.js";import {appendAuditEvent} from "../../platform/audit.js";import {withTenantTransaction} from "../../platform/database.js";
-import {observationAttemptSchema,observationPlanSchema,observationTargetSchema,rawAnswerSchema,type ObservationAttempt,type ObservationPlan,type ObservationTarget,type RawAnswer} from "./observation.js";
-export class ObservationRepository {constructor(private readonly pool:pg.Pool){}
- async createPlan(planInput:ObservationPlan,targetsInput:ObservationTarget[]):Promise<void>{const plan=observationPlanSchema.parse(planInput);const targets=targetsInput.map(x=>observationTargetSchema.parse(x));
-  if(targets.length!==plan.plannedSamples||targets.some(x=>x.tenantId!==plan.tenantId||x.planId!==plan.id))throw new Error("Observation targets do not match plan.");
-  await withTenantTransaction(this.pool,plan.tenantId,async c=>{await c.query(`insert into observation_plans(id,tenant_id,question_panel_id,question_panel_version,provider,model,surface,rules,planned_samples,created_at) values($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9,$10)`,[plan.id,plan.tenantId,plan.questionPanelId,plan.questionPanelVersion,plan.provider,plan.model,plan.surface,JSON.stringify(plan.rules),plan.plannedSamples,plan.createdAt]);
-   for(const t of targets)await c.query(`insert into observation_targets(id,tenant_id,plan_id,question_candidate_id,question_text,round,idempotency_key,context) values($1,$2,$3,$4,$5,$6,$7,$8::jsonb) on conflict(tenant_id,idempotency_key) do nothing`,[t.id,t.tenantId,t.planId,t.questionCandidateId,t.questionText,t.round,t.idempotencyKey,JSON.stringify(t.context)]);
-   await appendAuditEvent(c,createAuditEvent({tenantId:plan.tenantId,actorType:"user",actorId:"observation-plan.v1",traceId:plan.id,action:"observation_plan.created",resourceType:"observation_plan",resourceId:plan.id,detail:{plannedSamples:plan.plannedSamples}}));});}
- async target(tenantId:string,id:string):Promise<ObservationTarget|null>{return withTenantTransaction(this.pool,tenantId,async c=>{const r=await c.query(`select id,tenant_id,plan_id,question_candidate_id,question_text,round,idempotency_key,context from observation_targets where id=$1`,[id]);const x=r.rows[0];return x?observationTargetSchema.parse({id:x.id,tenantId:x.tenant_id,planId:x.plan_id,questionCandidateId:x.question_candidate_id,questionText:x.question_text,round:x.round,idempotencyKey:x.idempotency_key,context:x.context}):null;});}
- async workItem(tenantId:string,id:string):Promise<{target:ObservationTarget;plan:ObservationPlan}|null>{return withTenantTransaction(this.pool,tenantId,async c=>{const r=await c.query(`select t.id,t.tenant_id,t.plan_id,t.question_candidate_id,t.question_text,t.round,t.idempotency_key,t.context,p.question_panel_id,p.question_panel_version,p.provider,p.model,p.surface,p.rules,p.planned_samples,p.created_at from observation_targets t join observation_plans p on p.tenant_id=t.tenant_id and p.id=t.plan_id where t.id=$1`,[id]);const x=r.rows[0];if(!x)return null;return {target:observationTargetSchema.parse({id:x.id,tenantId:x.tenant_id,planId:x.plan_id,questionCandidateId:x.question_candidate_id,questionText:x.question_text,round:x.round,idempotencyKey:x.idempotency_key,context:x.context}),plan:observationPlanSchema.parse({id:x.plan_id,tenantId:x.tenant_id,questionPanelId:x.question_panel_id,questionPanelVersion:x.question_panel_version,provider:x.provider,model:x.model,surface:x.surface,rules:x.rules,plannedSamples:x.planned_samples,createdAt:x.created_at.toISOString()})};});}
- async usedTokens(tenantId:string,planId:string):Promise<number>{return withTenantTransaction(this.pool,tenantId,async c=>Number((await c.query(`select coalesce(sum(a.total_tokens),0)::text n from observation_attempts a join observation_targets t on t.tenant_id=a.tenant_id and t.id=a.target_id where t.plan_id=$1`,[planId])).rows[0]?.n??0));}
- async answer(tenantId:string,targetId:string):Promise<RawAnswer|null>{return withTenantTransaction(this.pool,tenantId,async c=>{const r=await c.query(`select id,tenant_id,target_id,attempt_id,answer_text,provider_response_id,model,surface,finish_reason,payload_sha256,captured_at from raw_answers where target_id=$1`,[targetId]);const x=r.rows[0];return x?rawAnswerSchema.parse({id:x.id,tenantId:x.tenant_id,targetId:x.target_id,attemptId:x.attempt_id,answerText:x.answer_text,providerResponseId:x.provider_response_id,model:x.model,surface:x.surface,finishReason:x.finish_reason,payloadSha256:x.payload_sha256,capturedAt:x.captured_at.toISOString()}):null;});}
- async recordAttempt(attemptInput:ObservationAttempt,answerInput?:RawAnswer):Promise<RawAnswer|null>{const a=observationAttemptSchema.parse(attemptInput);const answer=answerInput?rawAnswerSchema.parse(answerInput):null;
-  return withTenantTransaction(this.pool,a.tenantId,async c=>{await c.query(`insert into observation_attempts(id,tenant_id,target_id,attempt,status,request,response,error_code,http_status,prompt_tokens,completion_tokens,total_tokens,started_at,completed_at) values($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8,$9,$10,$11,$12,$13,$14)`,[a.id,a.tenantId,a.targetId,a.attempt,a.status,JSON.stringify(a.request),JSON.stringify(a.response),a.errorCode,a.httpStatus,a.promptTokens,a.completionTokens,a.totalTokens,a.startedAt,a.completedAt]);let saved:RawAnswer|null=null;
-   if(answer){if(answer.attemptId!==a.id||answer.targetId!==a.targetId)throw new Error("Raw answer does not match attempt.");await c.query(`insert into raw_answers(id,tenant_id,target_id,attempt_id,answer_text,provider_response_id,model,surface,finish_reason,payload_sha256,captured_at) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,[answer.id,answer.tenantId,answer.targetId,answer.attemptId,answer.answerText,answer.providerResponseId,answer.model,answer.surface,answer.finishReason,answer.payloadSha256,answer.capturedAt]);saved=answer;}
-   await appendAuditEvent(c,createAuditEvent({tenantId:a.tenantId,actorType:"worker",actorId:"observation-worker.v1",traceId:a.targetId,action:`observation_attempt.${a.status}`,resourceType:"observation_attempt",resourceId:a.id,detail:{attempt:a.attempt,totalTokens:a.totalTokens,answerId:saved?.id??null}}));return saved;});}
+import type pg from "pg";
+import { createAuditEvent } from "../../kernel/audit-event.js";
+import { appendAuditEvent } from "../../platform/audit.js";
+import { withTenantTransaction } from "../../platform/database.js";
+import {
+  observationAttemptSchema,
+  observationPlanSchema,
+  observationTargetSchema,
+  rawAnswerSchema,
+  type ObservationAttempt,
+  type ObservationPlan,
+  type ObservationTarget,
+  type RawAnswer,
+} from "./observation.js";
+export class ObservationRepository {
+  constructor(private readonly pool: pg.Pool) {}
+  async createPlan(
+    planInput: ObservationPlan,
+    targetsInput: ObservationTarget[],
+  ): Promise<void> {
+    const plan = observationPlanSchema.parse(planInput);
+    const targets = targetsInput.map((x) => observationTargetSchema.parse(x));
+    if (
+      targets.length !== plan.plannedSamples ||
+      targets.some((x) => x.tenantId !== plan.tenantId || x.planId !== plan.id)
+    )
+      throw new Error("Observation targets do not match plan.");
+    await withTenantTransaction(this.pool, plan.tenantId, async (c) => {
+      await c.query(
+        `insert into observation_plans(id,tenant_id,question_panel_id,question_panel_version,provider,model,surface,rules,planned_samples,created_at) values($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9,$10)`,
+        [
+          plan.id,
+          plan.tenantId,
+          plan.questionPanelId,
+          plan.questionPanelVersion,
+          plan.provider,
+          plan.model,
+          plan.surface,
+          JSON.stringify(plan.rules),
+          plan.plannedSamples,
+          plan.createdAt,
+        ],
+      );
+      for (const t of targets)
+        await c.query(
+          `insert into observation_targets(id,tenant_id,plan_id,question_candidate_id,question_text,round,idempotency_key,context) values($1,$2,$3,$4,$5,$6,$7,$8::jsonb) on conflict(tenant_id,idempotency_key) do nothing`,
+          [
+            t.id,
+            t.tenantId,
+            t.planId,
+            t.questionCandidateId,
+            t.questionText,
+            t.round,
+            t.idempotencyKey,
+            JSON.stringify(t.context),
+          ],
+        );
+      await appendAuditEvent(
+        c,
+        createAuditEvent({
+          tenantId: plan.tenantId,
+          actorType: "user",
+          actorId: "observation-plan.v1",
+          traceId: plan.id,
+          action: "observation_plan.created",
+          resourceType: "observation_plan",
+          resourceId: plan.id,
+          detail: { plannedSamples: plan.plannedSamples },
+        }),
+      );
+    });
+  }
+  async target(
+    tenantId: string,
+    id: string,
+  ): Promise<ObservationTarget | null> {
+    return withTenantTransaction(this.pool, tenantId, async (c) => {
+      const r = await c.query(
+        `select id,tenant_id,plan_id,question_candidate_id,question_text,round,idempotency_key,context from observation_targets where id=$1`,
+        [id],
+      );
+      const x = r.rows[0];
+      return x
+        ? observationTargetSchema.parse({
+            id: x.id,
+            tenantId: x.tenant_id,
+            planId: x.plan_id,
+            questionCandidateId: x.question_candidate_id,
+            questionText: x.question_text,
+            round: x.round,
+            idempotencyKey: x.idempotency_key,
+            context: x.context,
+          })
+        : null;
+    });
+  }
+  async workItem(
+    tenantId: string,
+    id: string,
+  ): Promise<{ target: ObservationTarget; plan: ObservationPlan } | null> {
+    return withTenantTransaction(this.pool, tenantId, async (c) => {
+      const r = await c.query(
+        `select t.id,t.tenant_id,t.plan_id,t.question_candidate_id,t.question_text,t.round,t.idempotency_key,t.context,p.question_panel_id,p.question_panel_version,p.provider,p.model,p.surface,p.rules,p.planned_samples,p.created_at from observation_targets t join observation_plans p on p.tenant_id=t.tenant_id and p.id=t.plan_id where t.id=$1`,
+        [id],
+      );
+      const x = r.rows[0];
+      if (!x) return null;
+      return {
+        target: observationTargetSchema.parse({
+          id: x.id,
+          tenantId: x.tenant_id,
+          planId: x.plan_id,
+          questionCandidateId: x.question_candidate_id,
+          questionText: x.question_text,
+          round: x.round,
+          idempotencyKey: x.idempotency_key,
+          context: x.context,
+        }),
+        plan: observationPlanSchema.parse({
+          id: x.plan_id,
+          tenantId: x.tenant_id,
+          questionPanelId: x.question_panel_id,
+          questionPanelVersion: x.question_panel_version,
+          provider: x.provider,
+          model: x.model,
+          surface: x.surface,
+          rules: x.rules,
+          plannedSamples: x.planned_samples,
+          createdAt: x.created_at.toISOString(),
+        }),
+      };
+    });
+  }
+  async usedTokens(tenantId: string, planId: string): Promise<number> {
+    return withTenantTransaction(this.pool, tenantId, async (c) =>
+      Number(
+        (
+          await c.query(
+            `select coalesce(sum(a.total_tokens),0)::text n from observation_attempts a join observation_targets t on t.tenant_id=a.tenant_id and t.id=a.target_id where t.plan_id=$1`,
+            [planId],
+          )
+        ).rows[0]?.n ?? 0,
+      ),
+    );
+  }
+  async answer(tenantId: string, targetId: string): Promise<RawAnswer | null> {
+    return withTenantTransaction(this.pool, tenantId, async (c) => {
+      const r = await c.query(
+        `select id,tenant_id,target_id,attempt_id,answer_text,provider_response_id,model,surface,finish_reason,payload_sha256,captured_at from raw_answers where target_id=$1`,
+        [targetId],
+      );
+      const x = r.rows[0];
+      return x
+        ? rawAnswerSchema.parse({
+            id: x.id,
+            tenantId: x.tenant_id,
+            targetId: x.target_id,
+            attemptId: x.attempt_id,
+            answerText: x.answer_text,
+            providerResponseId: x.provider_response_id,
+            model: x.model,
+            surface: x.surface,
+            finishReason: x.finish_reason,
+            payloadSha256: x.payload_sha256,
+            capturedAt: x.captured_at.toISOString(),
+          })
+        : null;
+    });
+  }
+  async recordAttempt(
+    attemptInput: ObservationAttempt,
+    answerInput?: RawAnswer,
+  ): Promise<RawAnswer | null> {
+    const a = observationAttemptSchema.parse(attemptInput);
+    const answer = answerInput ? rawAnswerSchema.parse(answerInput) : null;
+    return withTenantTransaction(this.pool, a.tenantId, async (c) => {
+      await c.query(
+        `insert into observation_attempts(id,tenant_id,target_id,attempt,status,request,response,error_code,http_status,prompt_tokens,completion_tokens,total_tokens,started_at,completed_at) values($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8,$9,$10,$11,$12,$13,$14)`,
+        [
+          a.id,
+          a.tenantId,
+          a.targetId,
+          a.attempt,
+          a.status,
+          JSON.stringify(a.request),
+          JSON.stringify(a.response),
+          a.errorCode,
+          a.httpStatus,
+          a.promptTokens,
+          a.completionTokens,
+          a.totalTokens,
+          a.startedAt,
+          a.completedAt,
+        ],
+      );
+      let saved: RawAnswer | null = null;
+      if (answer) {
+        if (answer.attemptId !== a.id || answer.targetId !== a.targetId)
+          throw new Error("Raw answer does not match attempt.");
+        await c.query(
+          `insert into raw_answers(id,tenant_id,target_id,attempt_id,answer_text,provider_response_id,model,surface,finish_reason,payload_sha256,captured_at) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+          [
+            answer.id,
+            answer.tenantId,
+            answer.targetId,
+            answer.attemptId,
+            answer.answerText,
+            answer.providerResponseId,
+            answer.model,
+            answer.surface,
+            answer.finishReason,
+            answer.payloadSha256,
+            answer.capturedAt,
+          ],
+        );
+        saved = answer;
+      }
+      await appendAuditEvent(
+        c,
+        createAuditEvent({
+          tenantId: a.tenantId,
+          actorType: "worker",
+          actorId: "observation-worker.v1",
+          traceId: a.targetId,
+          action: `observation_attempt.${a.status}`,
+          resourceType: "observation_attempt",
+          resourceId: a.id,
+          detail: {
+            attempt: a.attempt,
+            totalTokens: a.totalTokens,
+            answerId: saved?.id ?? null,
+          },
+        }),
+      );
+      return saved;
+    });
+  }
 }

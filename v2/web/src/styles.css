@@ -401,6 +401,41 @@ nav button.active {
   background: #f6f8f5;
   border-radius: 16px;
 }
+.citation-evidence {
+  margin: 26px 0;
+}
+.citation-evidence h3 {
+  margin: 7px 0 14px;
+}
+.citation-empty {
+  padding: 18px;
+  border: 1px dashed #cbd9ce;
+  border-radius: 14px;
+  background: #f7f9f6;
+}
+.citation-empty p,
+.citation-list p,
+.citation-list small {
+  color: var(--muted);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.citation-empty p {
+  margin: 7px 0 0;
+}
+.citation-list {
+  display: grid;
+  gap: 10px;
+}
+.citation-list article {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 16px;
+}
+.citation-list article > strong {
+  display: block;
+  margin-top: 10px;
+}
 .evidence {
   border-top: 1px solid var(--line);
 }

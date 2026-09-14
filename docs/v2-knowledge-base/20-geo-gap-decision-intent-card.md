@@ -81,4 +81,4 @@
 - 完整本地验证为 21 个测试文件、97/97 通过，0 失败、0 跳过；覆盖规则路由、迁移、租户隔离、不可变、队列、幂等、真实采样、PostgreSQL 冷备恢复与 Redis AOF 恢复。
 - 验收脚本已补上前端类型检查和生产构建，防止后端更新而验收网页仍读取旧构建；本次构建验证通过。
 - 浏览器验证覆盖 1440×900 桌面、390×844 手机、决策建议页面、证据不足、暂不写内容、扩样与竞对深挖状态；无横向页面溢出、页面错误为 0，axe 审计 0 项违规。截图保存于 `v2/artifacts/acceptance-console/geo-gap-decision-*.png`。
-- 当前完成 Gate A-D。Linux CI 待本次提交后验证；Gate E 必须由用户实际查看网页并 Yes/No。阿里云原生验证继续保持 `blocked-by-host-policy`。
+- 提交 `35512b299890828b438a4b8c8b85d1487b7cb5e3` 已推送，GitHub Linux CI `34820591855` 成功。当前完成 Gate A-D；Gate E 必须由用户实际查看网页并 Yes/No。阿里云原生验证继续保持 `blocked-by-host-policy`。

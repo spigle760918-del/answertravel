@@ -7,7 +7,9 @@ const ConfigSchema = z.object({
   DATABASE_URL: z.string().url(),
   REDIS_URL: z.string().url(),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"]).default("info"),
-  DEEPSEEK_API_KEY: z.string().min(1).optional()
+  DEEPSEEK_API_KEY: z.string().min(1).optional(),
+  ACCEPTANCE_TENANT_ID: z.string().uuid().optional(),
+  WEB_ROOT: z.string().min(1).optional()
 });
 
 export type AppConfig = z.infer<typeof ConfigSchema>;

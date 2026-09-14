@@ -20,6 +20,7 @@ import { approveQuestionPanel, questionPanelSchema } from "../src/modules/questi
 import { createObservationPlan } from "../src/modules/observation/observation.js";
 import { ObservationRepository } from "../src/modules/observation/observation-repository.js";
 import { createObservationQueue, createObservationWorker, enqueueObservation, observationJob } from "../src/modules/observation/observation-queue.js";
+import { buildApp } from "../src/app.js";
 import { withTenantTransaction } from "../src/platform/database.js";
 import { createFoundationQueue, enqueueFoundationJob } from "../src/platform/foundation-queue.js";
 
@@ -31,7 +32,9 @@ if (!windows && process.getuid?.() === 0) throw new Error("Native Linux tests mu
 const root = resolve(".");
 const databaseOnly = process.argv.includes("--database-only");
 const deepseekSmoke = process.argv.includes("--deepseek-smoke");
+const serveAcceptance = process.argv.includes("--serve-acceptance");
 if (deepseekSmoke && !process.env.DEEPSEEK_API_KEY) throw new Error("DEEPSEEK_API_KEY is required for the explicit real-provider smoke test.");
+if (serveAcceptance && !deepseekSmoke) throw new Error("Acceptance console requires --deepseek-smoke so visible answers are real API samples.");
 const redisBinary = resolve(windows ? ".runtime/tools/redis-7.2.16/Redis-7.2.16-Windows-x64-msys2/redis-server.exe" : ".runtime/tools/redis-7.2.16/src/redis-server");
 const work = await mkdtemp(join(tmpdir(), "answertravel-v2-test-"));
 console.log(`Isolated test workspace: ${work}`);
@@ -121,6 +124,7 @@ async function killOwnedRedis(): Promise<void> {
 
 let success = false;
 let testSummary: Record<string, unknown> = {};
+let acceptanceTenantId: string | undefined;
 try {
   await run(executable("initdb"), ["-D", pgData, "-U", "answertravel_v2_admin", `--pwfile=${passwordFile}`,
     "--auth=scram-sha-256", "--encoding=UTF8", "--locale=C"], { cwd: bin });
@@ -144,6 +148,7 @@ try {
 
   if (deepseekSmoke) {
     const smokeTenantId = randomUUID(); const smokeCardId = randomUUID(); const smokeFactId = randomUUID();
+    acceptanceTenantId = smokeTenantId;
     const smokeAdmin = new pg.Pool({ connectionString: adminUrl });
     try { await smokeAdmin.query("insert into tenants(id,slug,display_name) values ($1,$2,$3)",
       [smokeTenantId, `deepseek-smoke-${smokeTenantId.slice(0, 8)}`, "DeepSeek provider test fixture"]); }
@@ -184,14 +189,15 @@ try {
       await questionRepository.createPanel(smokePanel, "deepseek-smoke-test");
       const approvedPanel = await questionRepository.createPanel(approveQuestionPanel(smokePanel, [], new Date().toISOString()), "deepseek-smoke-test");
       const observationRepository = new ObservationRepository(smokePool);
-      const observation = createObservationPlan({ id: randomUUID(), panel: approvedPanel, rules: { version: "deepseek-sampling.v1", rounds: 2,
+      const observation = createObservationPlan({ id: randomUUID(), panel: approvedPanel, rules: { version: "deepseek-sampling.v1", rounds: 3,
         language: "简体中文", regionContext: "中国大陆测试语境", temperature: 0.2, maxTokens: 1200, timeoutMs: 60_000,
         maxAttempts: 3, maxTotalTokens: 20_000 }, createdAt: new Date().toISOString() });
       await observationRepository.createPlan(observation.plan, observation.targets);
       const producer = createObservationQueue(redisUrl); const consumer = createObservationWorker(redisUrl, smokePool, process.env.DEEPSEEK_API_KEY!);
       try {
         await consumer.worker.waitUntilReady();
-        const jobs = await Promise.all(observation.targets.map((target) => enqueueObservation(producer.queue, observationJob(target))));
+        const selectedTargets = [observation.targets[0], observation.targets[1], observation.targets[3], observation.targets[4]].filter((target): target is NonNullable<typeof target> => Boolean(target));
+        const jobs = await Promise.all(selectedTargets.map((target) => enqueueObservation(producer.queue, observationJob(target))));
         for (let poll = 0; poll < 240; poll++) {
           const states = await Promise.all(jobs.map((job) => job.getState()));
           if (states.every((state) => state === "completed")) break;
@@ -205,6 +211,11 @@ try {
       } finally { await consumer.close(); await producer.close(); }
       const answerCount = await withTenantTransaction(smokePool, smokeTenantId, (client) => client.query<{ count: string }>("select count(*)::text as count from raw_answers"));
       if (answerCount.rows[0]?.count !== "4") throw new Error("Real DeepSeek observation smoke test did not persist exactly four answers.");
+      const stoppedTarget = observation.targets[2];
+      if (!stoppedTarget) throw new Error("Acceptance budget-stop target is missing.");
+      await observationRepository.recordAttempt({ id: randomUUID(), tenantId: smokeTenantId, targetId: stoppedTarget.id, attempt: 1,
+        status: "budget_stopped", request: {}, response: null, errorCode: "acceptance_budget_limit", httpStatus: null,
+        promptTokens: 0, completionTokens: 0, totalTokens: 0, startedAt: new Date().toISOString(), completedAt: new Date().toISOString() });
       console.log("PASS: Real DeepSeek API completed 2 questions x 2 rounds; four immutable API answers and attempt records were stored in the isolated database.");
     } finally { await smokePool.end(); }
   }
@@ -255,6 +266,16 @@ try {
     console.log("PASS: Redis AOF recovered the pending task after process termination.");
   }
   success = true;
+  if (serveAcceptance) {
+    if (!acceptanceTenantId) throw new Error("Acceptance tenant was not created.");
+    const acceptancePort = Number(process.env.ACCEPTANCE_PORT ?? 4274);
+    const app = buildApp({ NODE_ENV: "test", HOST: "127.0.0.1", PORT: acceptancePort, DATABASE_URL: appUrl, REDIS_URL: redisUrl,
+      LOG_LEVEL: "silent", ACCEPTANCE_TENANT_ID: acceptanceTenantId, WEB_ROOT: resolve("web-dist") });
+    await app.listen({ host: "127.0.0.1", port: acceptancePort });
+    console.log(`ACCEPTANCE_CONSOLE_READY http://127.0.0.1:${acceptancePort}`);
+    await new Promise<void>((done) => { process.once("SIGINT", done); process.once("SIGTERM", done); });
+    await app.close();
+  }
 } finally {
   await killOwnedRedis();
   await stopPostgres();

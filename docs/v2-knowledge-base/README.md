@@ -43,7 +43,8 @@
 | `23-brand-truth-completion-approval-intent-card.md` | 品牌事实缺口补充、公开范围确认与批准 | Gate A-F 已完成并封版 |
 | `24-brand-truth-approval-intent-card.md` | 品牌真相基线批准与可增补版本 | Gate A-F 已完成并封版 |
 | `25-real-question-panel-intent-card.md` | 北京珈程真实游客问题组草拟 | Gate A-F 已通过并封版 |
-| `26-first-real-observation-baseline-intent-card.md` | 北京珈程首次真实观察基线与自动诊断 | Gate A 待确认 |
+| `26-first-real-observation-baseline-intent-card.md` | 北京珈程首次真实观察基线与自动诊断 | Gate A-F 已通过并封版 |
+| `27-periodic-monitoring-intent-card.md` | 北京珈程周期化监测、失败补采与自动复诊 | Gate A 待确认 |
 
 ## 事实分级
 

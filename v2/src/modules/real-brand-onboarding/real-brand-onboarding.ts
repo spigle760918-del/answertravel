@@ -49,3 +49,27 @@ export function buildOnboardingPackage(input: {
 export function redactSensitiveText(value: string): string {
   return value.replace(/(?:sk|api|key|token)[-_]?[a-z0-9]{12,}/gi, "[已脱敏]");
 }
+
+export const completionInputSchema = z.object({
+  tenantId: z.string().uuid(), brandName: z.string().trim().min(1).max(200),
+  officialAliases: z.array(z.string().trim().min(1).max(200)).default([]),
+  officialWebsite: z.string().url().nullable(), officialAccounts: z.array(z.string().trim().min(1).max(500)).default([]),
+  destinations: z.array(z.string().trim().min(1).max(200)).min(1), products: z.array(z.string().trim().min(1).max(500)).min(1),
+  audiences: z.array(z.string().trim().min(1).max(200)).min(1), exclusions: z.array(z.string().trim().min(1).max(500)).default([]),
+  services: z.array(z.string().trim().min(1).max(1000)).min(1), differentiators: z.array(z.string().trim().min(1).max(1000)).min(1),
+  credentials: z.array(z.string().trim().min(1).max(1000)).default([]), protections: z.array(z.string().trim().min(1).max(1000)).default([]),
+  competitors: z.array(z.object({ name: z.string().trim().min(1).max(200), aliases: z.array(z.string().trim().min(1).max(200)).default([]), reason: z.string().trim().min(1).max(500) })).min(1),
+  publicFacts: z.array(z.string().trim().min(1).max(1000)).default([]), internalFacts: z.array(z.string().trim().min(1).max(1000)).default([]), restrictedFacts: z.array(z.string().trim().min(1).max(1000)).default([]), forbiddenExpressions: z.array(z.string().trim().min(1).max(200)).default([]),
+  sourceReference: z.string().trim().min(1).max(2000),
+});
+export type CompletionInput = z.infer<typeof completionInputSchema>;
+
+export function completionGaps(input: CompletionInput): string[] {
+  const item = completionInputSchema.parse(input); const gaps: string[] = [];
+  if (!item.officialWebsite) gaps.push("正式官网尚未确认");
+  if (!item.credentials.length) gaps.push("缺少可核验资质");
+  if (!item.protections.length) gaps.push("缺少真实保障或服务边界");
+  if (!item.publicFacts.length) gaps.push("尚未确认可公开事实");
+  if (!item.forbiddenExpressions.length) gaps.push("尚未确认禁用表达");
+  return gaps;
+}

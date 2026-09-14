@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { buildOnboardingPackage, createIntakeSource, redactSensitiveText } from "../../src/modules/real-brand-onboarding/real-brand-onboarding.js";
+import { buildOnboardingPackage, completionGaps, createIntakeSource, redactSensitiveText, completionInputSchema } from "../../src/modules/real-brand-onboarding/real-brand-onboarding.js";
 
 describe("real brand onboarding contracts", () => {
   it("creates a hashed source and keeps facts as drafts", () => {
@@ -12,5 +12,9 @@ describe("real brand onboarding contracts", () => {
   });
   it("never leaves credential-like text in an intake preview", () => {
     expect(redactSensitiveText("deepseek_api_key=sk-abcdefghijklmnop" )).toContain("[已脱敏]");
+  });
+  it("identifies missing business truth without inventing it", () => {
+    const input = completionInputSchema.parse({ tenantId:randomUUID(),brandName:"北京珈程国际旅行社",officialAliases:["北京珈程"],officialWebsite:"http://www.jiacheng666.com",officialAccounts:[],destinations:["云南"],products:["云南旅游服务"],audiences:["待确认"],exclusions:[],services:["待确认"],differentiators:["待确认"],credentials:[],protections:[],competitors:[{name:"待提供竞品",aliases:[],reason:"待确认"}],publicFacts:[],internalFacts:[],restrictedFacts:[],forbiddenExpressions:[],sourceReference:"用户补充"});
+    expect(completionGaps(input)).toEqual(expect.arrayContaining(["缺少可核验资质","尚未确认可公开事实"]));
   });
 });

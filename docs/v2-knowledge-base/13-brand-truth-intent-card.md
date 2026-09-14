@@ -1,6 +1,6 @@
 # 品牌真相中心意图卡：事实卡最小切片
 
-状态：Gate A/B/C 已通过，Gate D 本地自动评测通过，待 Linux CI 与业务验收
+状态：Gate A/B/C/D 已通过，待 Gate E 业务验收
 日期：2026-09-13
 
 ## 用户问题
@@ -50,6 +50,13 @@ AI 只能整理、去重、发现冲突和提出缺口；人确认真实性、�
 1. 将本切片提交至 GitHub 并运行同一 Linux CI；
 2. 向用户展示品牌真相最小切片的业务结果与限制；
 3. 用户 Yes/No 后封版本切片，再扩展事实冲突、缺口和公开范围能力。
+
+## Linux CI 证据
+
+- Git 提交：`10431626d2d5183bbb8e73a8c9e928df081d8694`；
+- GitHub Actions 运行：`34793214902`；
+- Ubuntu `verify` 作业成功，PostgreSQL 16、Redis 7、Node.js 24、锁文件安装、迁移/测试角色初始化和 `npm run check:integration` 全部步骤为 `success`；
+- 本地同一切片为 42 项通过、0 失败、0 跳过；Linux CI 成功状态由 GitHub API 独立复核。
 
 ## 非目标
 

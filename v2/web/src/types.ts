@@ -178,5 +178,16 @@ export type Overview = {
     diagnosisId: string | null;
     createdAt: string;
   };
+  realBrandOnboarding: null | {
+    brandName: string;
+    status: "draft";
+    sources: Array<{ sourceType: string; reference: string; capturedAt: string }>;
+    facts: Array<{ statement: string; category: string; visibility: string; confidence: string; needsHumanConfirmation: boolean }>;
+    competitors: Array<{ name: string; aliases: string[]; needsHumanConfirmation: boolean }>;
+    seedQuestions: Array<{ text: string; group: string }>;
+    conflicts: string[];
+    gaps: string[];
+    readyForApproval: boolean;
+  };
   limitations: string[];
 };

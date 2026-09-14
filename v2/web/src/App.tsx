@@ -2,9 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import type { Overview } from "./types";
 import { StatusPill } from "./components/StatusPill";
 import { AnswerDrawer } from "./components/AnswerDrawer";
-type Tab = "overview" | "truth" | "questions" | "geo" | "cycles" | "decision" | "runs";
+type Tab = "overview" | "onboarding" | "truth" | "questions" | "geo" | "cycles" | "decision" | "runs";
 const tabs: Array<[Tab, string]> = [
   ["overview", "项目概览"],
+  ["onboarding", "真实品牌接入"],
   ["truth", "品牌真相"],
   ["questions", "游客问题"],
   ["geo", "GEO 情报"],
@@ -211,6 +212,24 @@ export default function App() {
                 <p className="empty">当前版本没有未处理的质量问题。</p>
               )}
             </section>
+          )}
+          {tab === "onboarding" && (
+            data.realBrandOnboarding ? (
+              <>
+                <section className="panel">
+                  <div className="panel-head"><div><p className="eyebrow">真实品牌资料草案</p><h1>{data.realBrandOnboarding.brandName}</h1></div><StatusPill value={data.realBrandOnboarding.readyForApproval ? "可进入审核" : "资料待补充"} tone={data.realBrandOnboarding.readyForApproval ? "good" : "warn"} /></div>
+                  <p>这里只展示从历史资料提取的候选内容；未获你确认前，不会成为品牌真相，也不会用于答案采样。</p>
+                </section>
+                <section className="decision-grid">
+                  <article className="panel"><p className="eyebrow">候选事实</p><h2>需要你确认的品牌资料</h2>{data.realBrandOnboarding.facts.map((fact)=><div className="action-card" key={`${fact.category}-${fact.statement}`}><div><StatusPill value={fact.category}/><StatusPill value={fact.visibility}/></div><h3>{fact.statement}</h3><p>来源可信度：{fact.confidence === "high" ? "高" : fact.confidence === "medium" ? "中" : "低"} · {fact.needsHumanConfirmation ? "尚待确认" : "已确认"}</p></div>)}</article>
+                  <article className="panel"><p className="eyebrow">资料缺口</p><h2>现在不能由 AI 猜测的内容</h2><ul>{data.realBrandOnboarding.gaps.map((item)=><li key={item}>{item}</li>)}</ul>{data.realBrandOnboarding.conflicts.length?<><h3>冲突候选</h3><ul>{data.realBrandOnboarding.conflicts.map((item)=><li key={item}>{item}</li>)}</ul></>:null}</article>
+                </section>
+                <section className="decision-grid">
+                  <article className="panel"><p className="eyebrow">竞品范围</p><h2>{data.realBrandOnboarding.competitors.length ? "待确认竞品" : "尚未提供竞品"}</h2>{data.realBrandOnboarding.competitors.length?<ul>{data.realBrandOnboarding.competitors.map((item)=><li key={item.name}>{item.name}</li>)}</ul>:<p className="empty">不会从行业常识中替你猜竞品。</p>}</article>
+                  <article className="panel"><p className="eyebrow">历史问题种子</p><h2>{data.realBrandOnboarding.seedQuestions.length} 条待复核问题</h2><ul>{data.realBrandOnboarding.seedQuestions.map((item)=><li key={item.text}>{item.text} <small>· {item.group}</small></li>)}</ul></article>
+                </section>
+              </>
+            ) : <section className="panel"><h1>尚无真实品牌资料草案</h1><p className="empty">验收测试品牌不会自动迁移成真实品牌。</p></section>
           )}
           {tab === "questions" && (
             <section className="panel">

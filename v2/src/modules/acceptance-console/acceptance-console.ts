@@ -109,6 +109,17 @@ export type AcceptanceOverview = {
     diagnosisId: string | null;
     createdAt: string;
   };
+  realBrandOnboarding: null | {
+    brandName: string;
+    status: "draft";
+    sources: Array<{ sourceType: string; reference: string; capturedAt: string }>;
+    facts: Array<{ statement: string; category: string; visibility: string; confidence: string; needsHumanConfirmation: boolean }>;
+    competitors: Array<{ name: string; aliases: string[]; needsHumanConfirmation: boolean }>;
+    seedQuestions: Array<{ text: string; group: string }>;
+    conflicts: string[];
+    gaps: string[];
+    readyForApproval: boolean;
+  };
   geoIntelligence: {
     rulesVersion: "basic-geo.v1";
     naturalSampleCount: number;
@@ -181,6 +192,8 @@ export class AcceptanceConsoleRepository {
       const deepDive = diagnosisRow ? await client.query(`select * from competitor_deep_dive_recommendations where diagnosis_id=$1 limit 1`, [diagnosisRow.id]) : { rows: [] };
       const comparable = await client.query(`select c.*,a.max_new_samples,a.max_total_tokens,a.decision_reference from comparable_observation_snapshots c join sampling_expansion_authorizations a on a.tenant_id=c.tenant_id and a.id=c.authorization_id order by c.created_at desc,c.id desc limit 1`);
       const comparableRow = comparable.rows[0];
+      const onboarding = await client.query(`select package,status from real_brand_onboarding_packages order by created_at desc,id desc limit 1`);
+      const onboardingRow = onboarding.rows[0];
       const failures = await client.query(
         `select t.question_text,t.round,a.status,a.error_code,a.attempt,a.completed_at from observation_attempts a join observation_targets t on t.tenant_id=a.tenant_id and t.id=a.target_id where a.status<>'succeeded' order by a.completed_at desc`,
       );
@@ -351,6 +364,17 @@ export class AcceptanceConsoleRepository {
           decisionReference: comparableRow.decision_reference,
           diagnosisId: comparableRow.diagnosis_id,
           createdAt: comparableRow.created_at.toISOString(),
+        } : null,
+        realBrandOnboarding: onboardingRow ? {
+          brandName: onboardingRow.package.brandName,
+          status: onboardingRow.status,
+          sources: onboardingRow.package.sources.map((item:any)=>({sourceType:item.sourceType,reference:item.reference,capturedAt:item.capturedAt})),
+          facts: onboardingRow.package.facts.map((item:any)=>({statement:item.statement,category:item.category,visibility:item.visibility,confidence:item.confidence,needsHumanConfirmation:item.needsHumanConfirmation})),
+          competitors: onboardingRow.package.competitors.map((item:any)=>({name:item.name,aliases:item.aliases,needsHumanConfirmation:item.needsHumanConfirmation})),
+          seedQuestions: onboardingRow.package.seedQuestions.map((item:any)=>({text:item.text,group:item.group})),
+          conflicts: onboardingRow.package.conflicts,
+          gaps: onboardingRow.package.gaps,
+          readyForApproval: onboardingRow.package.gaps.length===0 && onboardingRow.package.facts.length>0 && onboardingRow.package.competitors.length>0,
         } : null,
         limitations: [
           "当前为验收测试数据，不代表真实品牌运营结果",

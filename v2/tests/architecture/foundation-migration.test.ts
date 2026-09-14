@@ -95,4 +95,10 @@ describe("foundation migration guardrails", () => {
     expect(sql).toContain("reject_immutable_mutation");
     expect(sql).toContain("force row level security");
   });
+  it("keeps real brand onboarding packages append-only and tenant isolated", async () => {
+    const sql = await readFile(resolve(process.cwd(), "migrations/0011_real_brand_onboarding.sql"), "utf8");
+    expect(sql).toContain("real_brand_onboarding_packages");
+    expect(sql).toContain("reject_immutable_mutation");
+    expect(sql).toContain("force row level security");
+  });
 });

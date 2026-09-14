@@ -40,6 +40,8 @@ import { createGeoDecisionWorker } from "../src/modules/geo-decision/geo-gap-dec
 import { GeoGapDecisionRepository } from "../src/modules/geo-decision/geo-gap-decision-repository.js";
 import { approveExpansion, comparePlans } from "../src/modules/observation-cycle/comparable-observation-cycle.js";
 import { ComparableObservationRepository } from "../src/modules/observation-cycle/comparable-observation-repository.js";
+import { buildOnboardingPackage, createIntakeSource } from "../src/modules/real-brand-onboarding/real-brand-onboarding.js";
+import { RealBrandOnboardingRepository } from "../src/modules/real-brand-onboarding/real-brand-onboarding-repository.js";
 import {
   createObservationQueue,
   createObservationWorker,
@@ -422,6 +424,18 @@ try {
         }),
         "deepseek-smoke-test",
       );
+      const historicalSource = createIntakeSource({ tenantId:smokeTenantId,sourceType:"file",reference:"server/data.json (V1 historical candidate only)",capturedAt:new Date().toISOString(),sensitive:false,content:{brandName:"北京珈程国际旅行社",alias:"北京珈程",website:"http://www.jiacheng666.com",questionCount:5} });
+      await new RealBrandOnboardingRepository(smokePool).create(buildOnboardingPackage({ tenantId:smokeTenantId,brandName:"北京珈程国际旅行社",source:historicalSource,
+        facts:[
+          {statement:"主品牌名称为北京珈程国际旅行社",category:"identity",factLevel:"F0",visibility:"public",confidence:"high",needsHumanConfirmation:false},
+          {statement:"历史资料记录品牌别名为北京珈程",category:"identity",factLevel:"F0",visibility:"undetermined",confidence:"low",needsHumanConfirmation:true},
+          {statement:"历史资料记录官网为 http://www.jiacheng666.com",category:"identity",factLevel:"F0",visibility:"undetermined",confidence:"low",needsHumanConfirmation:true},
+        ],competitors:[],seedQuestions:[
+          {text:"大理三天两夜怎么安排路线和住宿？",group:"路线规划"},{text:"雨季去云南旅游安全吗？需要准备什么？",group:"出行安全"},
+          {text:"云南 5 天游玩路线如何安排更省时间？",group:"路线规划"},{text:"第一次去云南，哪些景点最值得安排？",group:"旅行体验"},
+          {text:"带孩子去云南适合自由行还是跟团？",group:"旅行体验"},
+        ],gaps:["缺少主要竞品名称与别名","缺少核心产品与目的地范围","缺少服务流程和适用人群","缺少可验证差异化能力","缺少资质、保障及其证据来源","缺少公开范围、敏感信息和禁用表达"],
+        conflicts:["官网使用 HTTP 地址，需确认当前正式官网及 HTTPS 可用性"] }));
       const questionRepository = new QuestionIntelligenceRepository(smokePool);
       const service = new QuestionIntelligenceService(
         new DeepSeekQuestionGenerator({

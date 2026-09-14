@@ -19,6 +19,7 @@ export const proposedCompetitorSchema = z.object({
 export const onboardingPackageSchema = z.object({
   id: z.string().uuid(), tenantId: z.string().uuid(), brandName: z.string().trim().min(1).max(200),
   sources: z.array(intakeSourceSchema).min(1), facts: z.array(proposedFactSchema), competitors: z.array(proposedCompetitorSchema),
+  seedQuestions: z.array(z.object({ text: z.string().trim().min(3).max(500), group: z.string().trim().min(1).max(100), sourceId: z.string().uuid() })),
   conflicts: z.array(z.string().min(1)), gaps: z.array(z.string().min(1)), createdAt: z.string().datetime({ offset: true }),
 });
 export type IntakeSource = z.infer<typeof intakeSourceSchema>;
@@ -34,12 +35,14 @@ export function createIntakeSource(input: Omit<IntakeSource, "id" | "contentSha2
 
 export function buildOnboardingPackage(input: {
   tenantId: string; brandName: string; source: IntakeSource; facts: Array<Omit<ProposedFact, "id" | "sourceId" | "status">>;
-  competitors: Array<Omit<ProposedCompetitor, "id" | "sourceId" | "status">>; conflicts?: string[]; gaps?: string[];
+  competitors: Array<Omit<ProposedCompetitor, "id" | "sourceId" | "status">>; seedQuestions?: Array<{ text: string; group: string }>;
+  conflicts?: string[]; gaps?: string[];
 }): OnboardingPackage {
   const source = intakeSourceSchema.parse(input.source);
   return onboardingPackageSchema.parse({ id: randomUUID(), tenantId: input.tenantId, brandName: input.brandName,
     sources: [source], facts: input.facts.map((fact) => ({ ...fact, id: randomUUID(), sourceId: source.id, status: "draft" })),
     competitors: input.competitors.map((competitor) => ({ ...competitor, id: randomUUID(), sourceId: source.id, status: "draft" })),
+    seedQuestions: (input.seedQuestions ?? []).map((question) => ({ ...question, sourceId: source.id })),
     conflicts: input.conflicts ?? [], gaps: input.gaps ?? [], createdAt: new Date().toISOString() });
 }
 

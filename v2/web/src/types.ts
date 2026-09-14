@@ -33,6 +33,8 @@ export type Overview = {
       id: string;
       model: string;
       surface: string;
+      cycleKey: string;
+      authorizedExpansion: boolean;
       plannedSamples: number;
       createdAt: string;
       success: number;
@@ -163,6 +165,18 @@ export type Overview = {
       stopConditions: string[];
       requiresApproval: boolean;
     };
+  };
+  observationCycles: null | {
+    rulesVersion: "comparable-observation.v1";
+    status: "comparable" | "not_comparable" | "insufficient";
+    validAnswerCount: number;
+    observationPlanCount: number;
+    differences: string[];
+    approvedSampleBudget: number;
+    approvedTokenBudget: number;
+    decisionReference: string;
+    diagnosisId: string | null;
+    createdAt: string;
   };
   limitations: string[];
 };

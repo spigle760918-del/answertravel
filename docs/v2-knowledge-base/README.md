@@ -38,7 +38,7 @@
 | `18-citation-source-evidence-intent-card.md` | 回答引用候选、来源快照与安全抓取证据 | Gate A-F 已通过并封版 |
 | `19-basic-geo-intelligence-intent-card.md` | 品牌/竞品提及、条件化排名、主张情感与同口径对比 | Gate A-F 已通过并封版 |
 | `20-geo-gap-decision-intent-card.md` | 差距根因、内容方向、竞对深挖触发与执行路线 | Gate A-F 已通过并封版 |
-| `21-comparable-observation-cycle-intent-card.md` | 同口径样本扩充、可比较观察周期与自动复诊 | Gate A 待用户确认 |
+| `21-comparable-observation-cycle-intent-card.md` | 同口径样本扩充、可比较观察周期与自动复诊 | Gate A-D 已完成，Gate E 待用户验收 |
 
 ## 事实分级
 

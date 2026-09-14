@@ -36,6 +36,8 @@ export type AcceptanceOverview = {
       id: string;
       model: string;
       surface: string;
+      cycleKey: string;
+      authorizedExpansion: boolean;
       plannedSamples: number;
       createdAt: string;
       success: number;
@@ -95,6 +97,18 @@ export type AcceptanceOverview = {
       completedAt: string;
     }>;
   };
+  observationCycles: null | {
+    rulesVersion: "comparable-observation.v1";
+    status: "comparable" | "not_comparable" | "insufficient";
+    validAnswerCount: number;
+    observationPlanCount: number;
+    differences: string[];
+    approvedSampleBudget: number;
+    approvedTokenBudget: number;
+    decisionReference: string;
+    diagnosisId: string | null;
+    createdAt: string;
+  };
   geoIntelligence: {
     rulesVersion: "basic-geo.v1";
     naturalSampleCount: number;
@@ -139,11 +153,11 @@ export class AcceptanceConsoleRepository {
         `select brand,competitors from geo_entity_sets where status='approved' order by created_at desc,version desc limit 1`,
       );
       const plans =
-        await client.query(`select p.id,p.model,p.surface,p.planned_samples,p.created_at,
+        await client.query(`select p.id,p.model,p.surface,p.cycle_key,p.authorization_id,p.planned_samples,p.created_at,
       count(distinct a.id) filter(where a.status='succeeded')::int success,count(distinct a.id) filter(where a.status in('retryable_failure','terminal_failure'))::int failed,
       count(distinct a.id) filter(where a.status='budget_stopped')::int budget_stopped,coalesce(sum(a.total_tokens),0)::int tokens
       from observation_plans p left join observation_targets t on t.tenant_id=p.tenant_id and t.plan_id=p.id left join observation_attempts a on a.tenant_id=t.tenant_id and a.target_id=t.id
-      group by p.id,p.model,p.surface,p.planned_samples,p.created_at order by p.created_at desc`);
+      group by p.id,p.model,p.surface,p.cycle_key,p.authorization_id,p.planned_samples,p.created_at order by p.created_at desc`);
       const answers =
         await client.query(`select r.id,t.plan_id,t.question_text,t.round,r.answer_text,r.model,r.surface,r.finish_reason,r.captured_at,
       a.total_tokens,(select count(*)::int from observation_attempts x where x.tenant_id=t.tenant_id and x.target_id=t.id) attempts
@@ -165,6 +179,8 @@ export class AcceptanceConsoleRepository {
       const diagnosisRow = diagnosis.rows[0];
       const decisionActions = diagnosisRow ? await client.query(`select * from geo_action_proposals where diagnosis_id=$1 order by case priority when 'high' then 1 when 'medium' then 2 else 3 end,created_at,id`, [diagnosisRow.id]) : { rows: [] };
       const deepDive = diagnosisRow ? await client.query(`select * from competitor_deep_dive_recommendations where diagnosis_id=$1 limit 1`, [diagnosisRow.id]) : { rows: [] };
+      const comparable = await client.query(`select c.*,a.max_new_samples,a.max_total_tokens,a.decision_reference from comparable_observation_snapshots c join sampling_expansion_authorizations a on a.tenant_id=c.tenant_id and a.id=c.authorization_id order by c.created_at desc,c.id desc limit 1`);
+      const comparableRow = comparable.rows[0];
       const failures = await client.query(
         `select t.question_text,t.round,a.status,a.error_code,a.attempt,a.completed_at from observation_attempts a join observation_targets t on t.tenant_id=a.tenant_id and t.id=a.target_id where a.status<>'succeeded' order by a.completed_at desc`,
       );
@@ -236,6 +252,8 @@ export class AcceptanceConsoleRepository {
             id: x.id,
             model: x.model,
             surface: x.surface,
+            cycleKey: x.cycle_key,
+            authorizedExpansion: Boolean(x.authorization_id),
             plannedSamples: x.planned_samples,
             createdAt: x.created_at.toISOString(),
             success: x.success,
@@ -322,12 +340,25 @@ export class AcceptanceConsoleRepository {
           actions: decisionActions.rows.map((action) => ({ actionType:action.action_type,factLevel:action.fact_level,title:action.title,rationale:action.rationale,priority:action.priority,risk:action.risk,requiresApproval:action.requires_approval,ownerType:action.owner_type,expectedWindow:action.expected_window,successMetric:action.success_metric })),
           deepDive: { decision:deepDive.rows[0].decision,factLevel:deepDive.rows[0].fact_level,reason:deepDive.rows[0].reason,proposedSampleBudget:deepDive.rows[0].proposed_sample_budget,questionThemes:deepDive.rows[0].question_themes,stopConditions:deepDive.rows[0].stop_conditions,requiresApproval:deepDive.rows[0].requires_approval },
         } : null,
+        observationCycles: comparableRow ? {
+          rulesVersion: comparableRow.rules_version,
+          status: comparableRow.status,
+          validAnswerCount: comparableRow.valid_answer_count,
+          observationPlanCount: comparableRow.observation_plan_count,
+          differences: comparableRow.differences,
+          approvedSampleBudget: comparableRow.max_new_samples,
+          approvedTokenBudget: comparableRow.max_total_tokens,
+          decisionReference: comparableRow.decision_reference,
+          diagnosisId: comparableRow.diagnosis_id,
+          createdAt: comparableRow.created_at.toISOString(),
+        } : null,
         limitations: [
           "当前为验收测试数据，不代表真实品牌运营结果",
           "当前仅验证 DeepSeek API，不代表 DeepSeek Web/App 搜索表现",
           "当前仅提供基础提及、条件化排名和规则型主张情感，不代表完整 GEO 决策或趋势",
           "引用候选与页面快照不等于内容被模型吸收或产生因果影响",
           "差距诊断当前先执行确定性证据门禁；网站诊断尚未接入时会明确显示缺失，不由 AI 猜测",
+          "第二观察周期只扩充获批的中性样本；竞对直问仍需独立 Yes/No",
         ],
       };
     });

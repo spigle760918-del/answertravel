@@ -2,12 +2,13 @@ import { useEffect, useMemo, useState } from "react";
 import type { Overview } from "./types";
 import { StatusPill } from "./components/StatusPill";
 import { AnswerDrawer } from "./components/AnswerDrawer";
-type Tab = "overview" | "truth" | "questions" | "geo" | "decision" | "runs";
+type Tab = "overview" | "truth" | "questions" | "geo" | "cycles" | "decision" | "runs";
 const tabs: Array<[Tab, string]> = [
   ["overview", "项目概览"],
   ["truth", "品牌真相"],
   ["questions", "游客问题"],
   ["geo", "GEO 情报"],
+  ["cycles", "可比较周期"],
   ["decision", "决策建议"],
   ["runs", "采集与回答"],
 ];
@@ -421,6 +422,26 @@ export default function App() {
               <section className="panel"><h1>决策尚未生成</h1><p className="empty">等待基础 GEO 情报完成后自动评估，不使用模拟建议填充。</p></section>
             )
           )}
+          {tab === "cycles" && (
+            data.observationCycles ? (
+              <>
+                <section className="panel">
+                  <div className="panel-head"><div><p className="eyebrow">同口径样本扩充</p><h1>第二观察周期已经形成</h1></div><div><StatusPill value={data.observationCycles.status === "comparable" ? "可比较" : "不可比较"} tone={data.observationCycles.status === "comparable" ? "good" : "warn"} /><StatusPill value={data.observationCycles.rulesVersion} tone="good" /></div></div>
+                  <div className="decision-summary"><h2>{data.observationCycles.status === "comparable" ? "已达到自动复诊门槛" : "仍不能形成趋势判断"}</h2><p>{data.observationCycles.status === "comparable" ? "新旧周期的问题、模型、API 终端、区域和关键采样参数一致，系统已自动重新诊断。" : "关键口径存在变化，系统已阻止把两个周期拼成趋势。"}</p></div>
+                </section>
+                <section className="stat-grid decision-stats">
+                  <article><span>中性有效回答</span><strong>{data.observationCycles.validAnswerCount}</strong><small>最低门槛：6</small></article>
+                  <article><span>可比较周期</span><strong>{data.observationCycles.observationPlanCount}</strong><small>最低门槛：2</small></article>
+                  <article><span>本次新增授权</span><strong>{data.observationCycles.approvedSampleBudget}</strong><small>只允许中性回答</small></article>
+                  <article><span>竞对直问</span><strong>未启动</strong><small>仍需独立 Yes/No</small></article>
+                </section>
+                <section className="decision-grid">
+                  <article className="panel"><p className="eyebrow">人工授权边界</p><h2>只执行已确认的最小补采</h2><p>{data.observationCycles.decisionReference}</p><dl><div><dt>最大新增样本</dt><dd>{data.observationCycles.approvedSampleBudget}</dd></div><div><dt>Token 上限</dt><dd>{data.observationCycles.approvedTokenBudget}</dd></div></dl></article>
+                  <article className="panel"><p className="eyebrow">可比较性检查</p><h2>{data.observationCycles.differences.length ? "发现口径差异" : "关键口径完全一致"}</h2>{data.observationCycles.differences.length ? <ul>{data.observationCycles.differences.map((item) => <li key={item}>{item}</li>)}</ul> : <p>问题组、模型、终端、语言、区域、温度和回答长度上限均一致。</p>}</article>
+                </section>
+              </>
+            ) : <section className="panel"><h1>第二观察周期尚未形成</h1><p className="empty">系统不会用未获授权或不可比较的数据填充趋势。</p></section>
+          )}
           {tab === "runs" && (
             <>
               <section className="panel">
@@ -438,6 +459,7 @@ export default function App() {
                       <span>
                         {new Date(p.createdAt).toLocaleString("zh-CN")}
                       </span>
+                      <small>{p.cycleKey === "baseline" ? "基线周期" : "获批补采周期"}</small>
                     </div>
                     <div className="run-numbers">
                       <span>

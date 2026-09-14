@@ -24,6 +24,7 @@ export async function provisionTestDatabase(adminUrl: string, password: string):
     await pool.query(`grant select, insert, update, delete, truncate on citation_scans, citation_events, source_snapshots to ${pg.escapeIdentifier(role)}`);
     await pool.query(`grant select, insert, update, delete, truncate on geo_entity_sets, geo_analysis_runs, geo_entity_mentions, geo_ranking_facts, geo_claim_facts to ${pg.escapeIdentifier(role)}`);
     await pool.query(`grant select, insert, update, delete, truncate on geo_diagnosis_snapshots, geo_action_proposals, competitor_deep_dive_recommendations to ${pg.escapeIdentifier(role)}`);
+    await pool.query(`grant select, insert, update, delete, truncate on sampling_expansion_authorizations, comparable_observation_snapshots to ${pg.escapeIdentifier(role)}`);
     // Extra mutation grants exercise database triggers; production needs SELECT/INSERT only.
     await pool.query(`grant select, insert, update, delete, truncate on evidence_artifacts, audit_events to ${pg.escapeIdentifier(role)}`);
   } finally {

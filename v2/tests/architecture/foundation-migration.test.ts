@@ -88,4 +88,11 @@ describe("foundation migration guardrails", () => {
     expect(sql).toContain("reject_immutable_mutation");
     expect(sql).toContain("force row level security");
   });
+  it("keeps sampling approvals and comparable cycle snapshots append-only and tenant isolated", async () => {
+    const sql = await readFile(resolve(process.cwd(), "migrations/0010_comparable_observation_cycles.sql"), "utf8");
+    for (const table of ["sampling_expansion_authorizations", "comparable_observation_snapshots"]) expect(sql).toContain(table);
+    expect(sql).toContain("authorization_id");
+    expect(sql).toContain("reject_immutable_mutation");
+    expect(sql).toContain("force row level security");
+  });
 });

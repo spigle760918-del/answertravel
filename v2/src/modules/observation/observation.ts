@@ -9,6 +9,7 @@ export const samplingRulesSchema = z.object({
 });
 export const observationPlanSchema = z.object({ id: z.string().uuid(), tenantId: z.string().uuid(), questionPanelId: z.string().uuid(),
   questionPanelVersion: z.number().int().positive(), provider: z.literal("deepseek"), model: z.string().min(1).max(200), surface: z.literal("api"),
+  cycleKey: z.string().trim().min(1).max(120), authorizationId: z.string().uuid().nullable(),
   rules: samplingRulesSchema, plannedSamples: z.number().int().positive(), createdAt: z.string().datetime({ offset: true }) });
 export const observationTargetSchema = z.object({ id: z.string().uuid(), tenantId: z.string().uuid(), planId: z.string().uuid(),
   questionCandidateId: z.string().uuid(), questionText: z.string().trim().min(3).max(500), round: z.number().int().positive(),
@@ -28,14 +29,15 @@ export type RawAnswer = z.infer<typeof rawAnswerSchema>;
 const idFrom = (seed: string) => { const chars = createHash("sha256").update(seed).digest("hex").slice(0, 32).split(""); chars[12]="4";
   chars[16]=((Number.parseInt(chars[16] ?? "0",16)&3)|8).toString(16); return `${chars.slice(0,8).join("")}-${chars.slice(8,12).join("")}-${chars.slice(12,16).join("")}-${chars.slice(16,20).join("")}-${chars.slice(20).join("")}`; };
 
-export function createObservationPlan(input: { id: string; panel: QuestionPanel; rules: SamplingRules; model?: string; createdAt: string }): { plan: ObservationPlan; targets: ObservationTarget[] } {
+export function createObservationPlan(input: { id: string; panel: QuestionPanel; rules: SamplingRules; model?: string; cycleKey?: string; authorizationId?: string | null; createdAt: string }): { plan: ObservationPlan; targets: ObservationTarget[] } {
   const panel = questionPanelSchema.parse(input.panel); const rules = samplingRulesSchema.parse(input.rules);
   if (panel.status !== "approved") throw new Error("Observation requires an approved question panel.");
   const questions = panel.candidates.filter((item) => item.included); if (!questions.length) throw new Error("Approved panel has no included questions.");
   const plan = observationPlanSchema.parse({ id: input.id, tenantId: panel.tenantId, questionPanelId: panel.id, questionPanelVersion: panel.version,
-    provider: "deepseek", model: input.model ?? "deepseek-chat", surface: "api", rules, plannedSamples: questions.length * rules.rounds, createdAt: input.createdAt });
+    provider: "deepseek", model: input.model ?? "deepseek-chat", surface: "api", cycleKey: input.cycleKey ?? "baseline",
+    authorizationId: input.authorizationId ?? null, rules, plannedSamples: questions.length * rules.rounds, createdAt: input.createdAt });
   const targets = questions.flatMap((question) => Array.from({ length: rules.rounds }, (_, index) => {
-    const round = index + 1; const key = createHash("sha256").update(`${panel.tenantId}:${panel.id}:${panel.version}:${question.id}:${round}:${rules.version}`).digest("hex");
+    const round = index + 1; const key = createHash("sha256").update(`${panel.tenantId}:${panel.id}:${panel.version}:${input.cycleKey ?? "baseline"}:${question.id}:${round}:${rules.version}`).digest("hex");
     return observationTargetSchema.parse({ id: idFrom(key), tenantId: panel.tenantId, planId: plan.id, questionCandidateId: question.id,
       questionText: question.text, round, idempotencyKey: key, context: { language: rules.language, regionContext: rules.regionContext } });
   }));

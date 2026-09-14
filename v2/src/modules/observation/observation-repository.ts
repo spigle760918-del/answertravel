@@ -26,8 +26,18 @@ export class ObservationRepository {
     )
       throw new Error("Observation targets do not match plan.");
     await withTenantTransaction(this.pool, plan.tenantId, async (c) => {
+      if (plan.authorizationId) {
+        const authorization = await c.query(`select max_new_samples,allowed_object_type,status from sampling_expansion_authorizations where id=$1`, [plan.authorizationId]);
+        const approved = authorization.rows[0];
+        if (!approved || approved.status !== "approved") throw new Error("Observation expansion requires an approved authorization.");
+        if (plan.plannedSamples > approved.max_new_samples) throw new Error("Observation expansion exceeds the approved sample count.");
+        const panel = await c.query(`select candidates from question_panels where id=$1 and version=$2 and status='approved'`, [plan.questionPanelId, plan.questionPanelVersion]);
+        const candidates = Array.isArray(panel.rows[0]?.candidates) ? panel.rows[0].candidates : [];
+        const allowed = new Set(candidates.filter((item: any) => item.included && item.objectType === approved.allowed_object_type).map((item: any) => item.id));
+        if (targets.some((target) => !allowed.has(target.questionCandidateId))) throw new Error("Observation expansion contains a non-authorized question type.");
+      }
       await c.query(
-        `insert into observation_plans(id,tenant_id,question_panel_id,question_panel_version,provider,model,surface,rules,planned_samples,created_at) values($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9,$10)`,
+        `insert into observation_plans(id,tenant_id,question_panel_id,question_panel_version,provider,model,surface,cycle_key,authorization_id,rules,planned_samples,created_at) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11,$12)`,
         [
           plan.id,
           plan.tenantId,
@@ -36,6 +46,8 @@ export class ObservationRepository {
           plan.provider,
           plan.model,
           plan.surface,
+          plan.cycleKey,
+          plan.authorizationId,
           JSON.stringify(plan.rules),
           plan.plannedSamples,
           plan.createdAt,
@@ -70,6 +82,13 @@ export class ObservationRepository {
       );
     });
   }
+  async plan(tenantId: string, id: string): Promise<ObservationPlan | null> {
+    return withTenantTransaction(this.pool, tenantId, async (c) => {
+      const result = await c.query(`select id,tenant_id,question_panel_id,question_panel_version,provider,model,surface,cycle_key,authorization_id,rules,planned_samples,created_at from observation_plans where id=$1`, [id]);
+      const x = result.rows[0];
+      return x ? observationPlanSchema.parse({ id:x.id,tenantId:x.tenant_id,questionPanelId:x.question_panel_id,questionPanelVersion:x.question_panel_version,provider:x.provider,model:x.model,surface:x.surface,cycleKey:x.cycle_key,authorizationId:x.authorization_id,rules:x.rules,plannedSamples:x.planned_samples,createdAt:x.created_at.toISOString() }) : null;
+    });
+  }
   async target(
     tenantId: string,
     id: string,
@@ -100,7 +119,7 @@ export class ObservationRepository {
   ): Promise<{ target: ObservationTarget; plan: ObservationPlan } | null> {
     return withTenantTransaction(this.pool, tenantId, async (c) => {
       const r = await c.query(
-        `select t.id,t.tenant_id,t.plan_id,t.question_candidate_id,t.question_text,t.round,t.idempotency_key,t.context,p.question_panel_id,p.question_panel_version,p.provider,p.model,p.surface,p.rules,p.planned_samples,p.created_at from observation_targets t join observation_plans p on p.tenant_id=t.tenant_id and p.id=t.plan_id where t.id=$1`,
+        `select t.id,t.tenant_id,t.plan_id,t.question_candidate_id,t.question_text,t.round,t.idempotency_key,t.context,p.question_panel_id,p.question_panel_version,p.provider,p.model,p.surface,p.cycle_key,p.authorization_id,p.rules,p.planned_samples,p.created_at from observation_targets t join observation_plans p on p.tenant_id=t.tenant_id and p.id=t.plan_id where t.id=$1`,
         [id],
       );
       const x = r.rows[0];
@@ -124,6 +143,8 @@ export class ObservationRepository {
           provider: x.provider,
           model: x.model,
           surface: x.surface,
+          cycleKey: x.cycle_key,
+          authorizationId: x.authorization_id,
           rules: x.rules,
           plannedSamples: x.planned_samples,
           createdAt: x.created_at.toISOString(),

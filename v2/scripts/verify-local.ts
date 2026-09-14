@@ -38,6 +38,8 @@ import { GeoIntelligenceRepository } from "../src/modules/geo-intelligence/geo-i
 import { geoEntitySetSchema } from "../src/modules/geo-intelligence/geo-intelligence.js";
 import { createGeoDecisionWorker } from "../src/modules/geo-decision/geo-gap-decision-queue.js";
 import { GeoGapDecisionRepository } from "../src/modules/geo-decision/geo-gap-decision-repository.js";
+import { approveExpansion, comparePlans } from "../src/modules/observation-cycle/comparable-observation-cycle.js";
+import { ComparableObservationRepository } from "../src/modules/observation-cycle/comparable-observation-repository.js";
 import {
   createObservationQueue,
   createObservationWorker,
@@ -528,6 +530,7 @@ try {
         "deepseek-smoke-test",
       );
       const observationRepository = new ObservationRepository(smokePool);
+      const comparableRepository = new ComparableObservationRepository(smokePool);
       const observation = createObservationPlan({
         id: randomUUID(),
         panel: approvedPanel,
@@ -623,6 +626,46 @@ try {
           if (poll === 119) throw new Error("GEO gap decision did not complete for the real evidence set.");
           await delay(250);
         }
+        const authorization = await comparableRepository.authorize(approveExpansion({
+          tenantId: smokeTenantId,
+          decisionReference: "Gate A confirmed by user on 2026-09-14",
+          maxNewSamples: 2,
+          maxTotalTokens: 6_000,
+          approvedAt: new Date().toISOString(),
+        }));
+        const followup = createObservationPlan({
+          id: randomUUID(), panel: approvedPanel, model: observation.plan.model, cycleKey: "comparison-cycle-2",
+          authorizationId: authorization.id,
+          rules: { ...observation.plan.rules, rounds: 1, maxTotalTokens: authorization.maxTotalTokens },
+          createdAt: new Date().toISOString(),
+        });
+        if (followup.targets.length !== authorization.maxNewSamples) throw new Error("Authorized follow-up plan is not minimal.");
+        await observationRepository.createPlan(followup.plan, followup.targets);
+        const followupJobs = await Promise.all(followup.targets.map((target) => enqueueObservation(producer.queue, observationJob(target))));
+        for (let poll = 0; poll < 240; poll++) {
+          const states = await Promise.all(followupJobs.map((job) => job.getState()));
+          if (states.every((state) => state === "completed")) break;
+          if (states.some((state) => state === "failed")) throw new Error("Comparable follow-up observation failed.");
+          if (poll === 239) throw new Error("Comparable follow-up observation timed out.");
+          await delay(500);
+        }
+        let finalDecision = null;
+        for (let poll = 0; poll < 160; poll++) {
+          const counts = await withTenantTransaction(smokePool, smokeTenantId, (client) => client.query<{ answers:string; scans:string; runs:string }>(`select
+            (select count(*) from raw_answers)::text answers,
+            (select count(*) from citation_scans)::text scans,
+            (select count(*) from geo_analysis_runs where status='completed')::text runs`));
+          finalDecision = await new GeoGapDecisionRepository(smokePool).latest(smokeTenantId);
+          if (counts.rows[0]?.answers === "6" && counts.rows[0]?.scans === "6" && counts.rows[0]?.runs === "6" && finalDecision?.diagnosis.sampleCount === 6 && finalDecision.diagnosis.observationPlanCount === 2) break;
+          if (poll === 159) throw new Error("Comparable observation evidence or automatic re-diagnosis did not complete.");
+          await delay(250);
+        }
+        if (!finalDecision) throw new Error("Automatic re-diagnosis is missing.");
+        const snapshot = comparePlans(observation.plan, followup.plan, 6, finalDecision.diagnosis.id);
+        await comparableRepository.saveSnapshot(snapshot);
+        if (snapshot.status !== "comparable" || finalDecision.diagnosis.evidenceStatus !== "sufficient") throw new Error("Comparable cycle gate did not pass.");
+        if (finalDecision.deepDive.decision !== "no_trigger") throw new Error("Competitor direct-question sampling must remain disabled without evidence.");
+        console.log("PASS: Gate A authorization produced exactly two new neutral answers, a comparable second cycle, and automatic GEO re-diagnosis.");
       } finally {
         await consumer.close();
         await citations.close();
@@ -638,9 +681,9 @@ try {
             "select count(*)::text as count from raw_answers",
           ),
       );
-      if (answerCount.rows[0]?.count !== "4")
+      if (answerCount.rows[0]?.count !== "6")
         throw new Error(
-          "Real DeepSeek observation smoke test did not persist exactly four answers.",
+          "Real DeepSeek observation smoke test did not persist exactly six answers.",
         );
       const citationCounts = await withTenantTransaction(
         smokePool,
@@ -650,7 +693,7 @@ try {
             "select (select count(*) from citation_scans)::text scans,(select count(*) from citation_events)::text events",
           ),
       );
-      if (citationCounts.rows[0]?.scans !== "4")
+      if (citationCounts.rows[0]?.scans !== "6")
         throw new Error("Real answers are missing citation scan evidence.");
       const stoppedTarget = observation.targets[2];
       if (!stoppedTarget)
@@ -672,7 +715,7 @@ try {
         completedAt: new Date().toISOString(),
       });
       console.log(
-        `PASS: Real DeepSeek API completed 2 questions x 2 rounds; four immutable answers were scanned for citation evidence (${citationCounts.rows[0]?.events ?? "0"} candidates).`,
+        `PASS: Real DeepSeek API preserved four baseline answers and added exactly two authorized comparison-cycle answers; all six were scanned for citation evidence (${citationCounts.rows[0]?.events ?? "0"} candidates).`,
       );
     } finally {
       await smokePool.end();

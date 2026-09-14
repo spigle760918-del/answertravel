@@ -41,7 +41,7 @@ import { GeoGapDecisionRepository } from "../src/modules/geo-decision/geo-gap-de
 import { approveExpansion, comparePlans } from "../src/modules/observation-cycle/comparable-observation-cycle.js";
 import { ComparableObservationRepository } from "../src/modules/observation-cycle/comparable-observation-repository.js";
 import { buildOnboardingPackage, createIntakeSource } from "../src/modules/real-brand-onboarding/real-brand-onboarding.js";
-import { buildBenchmarkFactPack } from "../src/modules/real-brand-onboarding/benchmark-fact-pack.js";
+import { buildBenchmarkFactPack, buildBrandTruthDraftFromBenchmark } from "../src/modules/real-brand-onboarding/benchmark-fact-pack.js";
 import { RealBrandOnboardingRepository } from "../src/modules/real-brand-onboarding/real-brand-onboarding-repository.js";
 import {
   createObservationQueue,
@@ -731,6 +731,41 @@ try {
       );
     } finally {
       await smokePool.end();
+    }
+
+    if (serveAcceptance) {
+      const realTenantId = randomUUID();
+      const realAdmin = new pg.Pool({ connectionString: adminUrl });
+      try {
+        await realAdmin.query("insert into tenants(id,slug,display_name) values ($1,$2,$3)", [realTenantId, `jiacheng-${realTenantId.slice(0,8)}`, "北京珈程国际旅行社"]);
+      } finally { await realAdmin.end(); }
+      const realPool = new pg.Pool({ connectionString: appUrl });
+      try {
+        const pack = buildBenchmarkFactPack();
+        const truthRepository = new BrandTruthRepository(realPool);
+        const truthDraft = buildBrandTruthDraftFromBenchmark({ tenantId:realTenantId, brandName:"北京珈程国际旅行社" });
+        await truthRepository.create(truthDraft, "jiacheng-brand-truth-gate-e");
+        const approvedTruth = await truthRepository.create(approveBrandTruth({ ...truthDraft, facts:truthDraft.facts.map((fact)=>({...fact,status:"approved" as const})) }), "jiacheng-brand-truth-gate-e");
+        const source = createIntakeSource({ tenantId:realTenantId,sourceType:"manual",reference:"用户确认的北京珈程 GEO 基准事实包",capturedAt:pack.capturedAt,sensitive:true,content:pack });
+        await new RealBrandOnboardingRepository(realPool).create(buildOnboardingPackage({ tenantId:realTenantId,brandName:"北京珈程国际旅行社",source,
+          facts:pack.facts.map((fact)=>({statement:fact.statement,category:fact.category,factLevel:"F0" as const,visibility:fact.visibility,confidence:fact.accepted?"high" as const:"low" as const,needsHumanConfirmation:!fact.accepted})),
+          competitors:pack.competitors.map((competitor)=>({name:competitor.name,aliases:competitor.aliases,needsHumanConfirmation:false})),
+          seedQuestions:[{text:"第一次来北京，5天4晚跟团游怎么选？",group:"行程规划"},{text:"北京12人小团适合哪些游客？",group:"产品比较"},{text:"北京纯玩团如何确认没有购物和自费？",group:"风险确认"}],
+          gaps:[],conflicts:pack.contradictions }));
+        await new GeoIntelligenceRepository(realPool).createEntitySet(geoEntitySetSchema.parse({ id:randomUUID(),tenantId:realTenantId,version:1,status:"approved",createdAt:new Date().toISOString(),
+          brand:{id:"brand",name:"北京珈程国际旅行社",aliases:[]},competitors:pack.competitors.map((competitor,index)=>({id:`competitor-${index+1}`,name:competitor.name,aliases:competitor.aliases})) }), "jiacheng-monitoring-scope");
+        const realPanel = await new QuestionIntelligenceService(new DeepSeekQuestionGenerator({apiKey:process.env.DEEPSEEK_API_KEY!,timeoutMs:60_000}),new EvidenceRepository(realPool),new QuestionIntelligenceRepository(realPool)).generateDraft({
+          id:randomUUID(),tenantId:realTenantId,panelId:randomUUID(),brandAliases:[],destinations:["北京"],competitors:pack.competitors.map((item)=>item.name),
+          questionScope:"brand_and_neutral_only",seedQuestions:["第一次来北京，5天4晚跟团游怎么选？","北京小团游如何判断是否纯玩？","北京珈程国际旅行社怎么样？","故宫门票预约不上时旅行社会怎样调整行程？","遇到暴雨、高温或交通延误时，北京跟团游如何改行程和退费？"],requestedTotal:20,promptVersion:"question-expansion.v2",createdAt:new Date().toISOString(),
+        },approvedTruth,pack.forbiddenExpressions);
+        if (realPanel.status !== "draft" || realPanel.candidates.length !== 20 || realPanel.mix.actualTotal !== 20) throw new Error("Real brand question draft did not produce exactly twenty accepted candidates.");
+        if (realPanel.mix.baseline.actual !== 12 || realPanel.mix.exploration.actual !== 5 || realPanel.mix.trigger.actual !== 3) throw new Error("Real brand question draft did not preserve the approved 12/5/3 role mix.");
+        if (realPanel.candidates.some((item)=>item.included && ["competitor_direct","brand_vs_competitor"].includes(item.objectType))) throw new Error("Competitor direct questions entered the real brand draft without authorization.");
+        const realAnswers = await withTenantTransaction(realPool,realTenantId,(client)=>client.query<{count:string}>("select count(*)::text count from raw_answers"));
+        if (realAnswers.rows[0]?.count !== "0") throw new Error("Real brand question drafting must not collect answers.");
+        acceptanceTenantId = realTenantId;
+        console.log(`PASS: Beijing Jiacheng real question draft stored ${realPanel.candidates.length} candidates; ${realPanel.mix.actualTotal} passed deterministic gates; zero answers collected.`);
+      } finally { await realPool.end(); }
     }
   }
 

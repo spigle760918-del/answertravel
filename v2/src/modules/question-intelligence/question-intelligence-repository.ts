@@ -5,7 +5,7 @@ import { withTenantTransaction } from "../../platform/database.js";
 import { questionGenerationRunSchema, questionPanelSchema, type QuestionGenerationRun, type QuestionPanel } from "./question-intelligence.js";
 
 type RunRow = { id: string; tenant_id: string; brand_truth_card_id: string; brand_truth_version: number; status: "succeeded" | "failed";
-  provider: "deepseek"; model: string; prompt_version: "question-expansion.v1"; evidence_id: string; error_code: string | null; requested_at: Date; completed_at: Date };
+  provider: "deepseek"; model: string; prompt_version: "question-expansion.v1" | "question-expansion.v2"; evidence_id: string; error_code: string | null; requested_at: Date; completed_at: Date };
 type PanelRow = { id: string; tenant_id: string; version: number; status: "draft" | "approved"; brand_truth_card_id: string;
   brand_truth_version: number; generation_run_id: string; candidates: unknown; mix: unknown; created_at: Date };
 const mapRun = (row: RunRow): QuestionGenerationRun => questionGenerationRunSchema.parse({ id: row.id, tenantId: row.tenant_id,

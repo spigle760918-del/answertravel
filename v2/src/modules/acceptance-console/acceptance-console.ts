@@ -2,7 +2,7 @@ import type pg from "pg";
 import { withTenantTransaction } from "../../platform/database.js";
 
 export type AcceptanceOverview = {
-  environment: "acceptance_test";
+  environment: "acceptance_test" | "real_brand_draft";
   brand: {
     name: string;
     version: number;
@@ -227,8 +227,9 @@ export class AcceptanceConsoleRepository {
       for (const run of neutralRuns) for (const entityId of new Set((mentionsByRun.get(run.id) ?? []).filter((item) => item.entity_role === "competitor" && item.certainty === "certain").map((item) => item.entity_id)))
         competitorCounts.set(entityId, (competitorCounts.get(entityId) ?? 0) + 1);
       const sentimentCounts = new Map<string, number>(); for (const claim of geoClaims.rows) sentimentCounts.set(claim.sentiment, (sentimentCounts.get(claim.sentiment) ?? 0) + 1);
+      const isRealBrandDraft = b.brand_name === "北京珈程国际旅行社";
       return {
-        environment: "acceptance_test",
+        environment: isRealBrandDraft ? "real_brand_draft" : "acceptance_test",
         brand: {
           name: b.brand_name,
           version: b.version,
@@ -379,7 +380,7 @@ export class AcceptanceConsoleRepository {
           truthDraft: { status: "draft", publicCandidateCount: onboardingRow.package.facts.filter((item:any)=>item.visibility === "public" && item.confidence === "high").length, excludedCount: onboardingRow.package.facts.filter((item:any)=>item.visibility !== "public" || item.confidence !== "high").length, note: "仅公开且达到当前证据门槛的候选事实进入草案；受限、自述、存疑和内部规则仍被排除，尚未批准。" },
         } : null,
         limitations: [
-          "当前为验收测试数据，不代表真实品牌运营结果",
+          isRealBrandDraft ? "当前为真实品牌问题草案，尚未批准问题组或采集任何答案" : "当前为验收测试数据，不代表真实品牌运营结果",
           "当前仅验证 DeepSeek API，不代表 DeepSeek Web/App 搜索表现",
           "当前仅提供基础提及、条件化排名和规则型主张情感，不代表完整 GEO 决策或趋势",
           "引用候选与页面快照不等于内容被模型吸收或产生因果影响",

@@ -58,6 +58,25 @@ describe("question intelligence contract", () => {
     expect(panel.mix.actualTotal).toBe(0);
   });
 
+  it("blocks competitor questions in brand-and-neutral-only scope", () => {
+    const scopedGeneration = { ...generation, questionScope: "brand_and_neutral_only" as const };
+    const scopedPrompt = JSON.parse(buildQuestionExpansionPrompt(scopedGeneration, approvedTruth())) as {
+      allowedObjectTypes: string[]; targetMix: { baseline: number; exploration: number; trigger: number };
+    };
+    expect(scopedPrompt.allowedObjectTypes).toEqual(["neutral_category", "brand_direct"]);
+    expect(scopedPrompt.targetMix).toEqual({ baseline: 2, exploration: 1, trigger: 1 });
+    const panel = createQuestionPanelDraft({ panelId: scopedGeneration.panelId, generationRunId: scopedGeneration.id,
+      brandTruth: approvedTruth(), generation: scopedGeneration, forbiddenExpressions: [], createdAt, generated: [
+        question({ text: "竞品乙怎么样？", objectType: "competitor_direct", panelRole: "trigger" }),
+        question({ text: "品牌甲和竞品乙哪个更适合亲子家庭？", objectType: "brand_vs_competitor", panelRole: "trigger" }),
+      ] });
+    expect(panel.candidates).toEqual(expect.arrayContaining([
+      expect.objectContaining({ objectType: "competitor_direct", included: false, exclusionReason: "object_type_mismatch" }),
+      expect.objectContaining({ objectType: "brand_vs_competitor", included: false, exclusionReason: "object_type_mismatch" }),
+    ]));
+    expect(panel.mix.actualTotal).toBe(0);
+  });
+
   it("creates an immutable approval version and preserves explicit human rejection", () => {
     const panel = createQuestionPanelDraft({ panelId: generation.panelId, generationRunId: generation.id, brandTruth: approvedTruth(), generation,
       forbiddenExpressions: [], createdAt, generated: [question(), question({ text: "品牌甲适合亲子家庭吗？", objectType: "brand_direct",

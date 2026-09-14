@@ -54,9 +54,10 @@ export const questionGenerationInputSchema = z.object({
   brandAliases: z.array(z.string().trim().min(1).max(200)).max(30).default([]),
   destinations: z.array(z.string().trim().min(1).max(120)).min(1).max(20),
   competitors: z.array(z.string().trim().min(1).max(200)).max(20),
+  questionScope: z.enum(["all_objects", "brand_and_neutral_only"]).optional(),
   seedQuestions: z.array(z.string().trim().min(3).max(500)).max(50).default([]),
   requestedTotal: z.number().int().min(4).max(100),
-  promptVersion: z.literal("question-expansion.v1"),
+  promptVersion: z.enum(["question-expansion.v1", "question-expansion.v2"]),
   createdAt: z.string().datetime({ offset: true }),
 });
 
@@ -65,7 +66,7 @@ export const questionGenerationResultSchema = z.object({ questions: z.array(gene
 export const questionGenerationRunSchema = z.object({
   id: z.string().uuid(), tenantId: z.string().uuid(), brandTruthCardId: z.string().uuid(), brandTruthVersion: z.number().int().positive(),
   status: z.enum(["succeeded", "failed"]), provider: z.literal("deepseek"), model: z.string().trim().min(1).max(200),
-  promptVersion: z.literal("question-expansion.v1"), evidenceId: z.string().uuid(), errorCode: z.string().trim().min(1).max(120).nullable(),
+  promptVersion: z.enum(["question-expansion.v1", "question-expansion.v2"]), evidenceId: z.string().uuid(), errorCode: z.string().trim().min(1).max(120).nullable(),
   requestedAt: z.string().datetime({ offset: true }), completedAt: z.string().datetime({ offset: true }),
 });
 
@@ -132,6 +133,9 @@ export function createQuestionPanelDraft(input: {
     if (!exclusionReason && input.forbiddenExpressions.some((term) => term && question.text.includes(term))) exclusionReason = "forbidden_expression";
     if (!exclusionReason && hiddenStatements.some((statement) => statement.length >= 4 && normalize(question.text).includes(statement))) exclusionReason = "hidden_fact";
     if (!exclusionReason && question.supportingFactIds.some((factId) => !publicFactIds.has(factId))) exclusionReason = "ungrounded_fact";
+    if (!exclusionReason) {
+      if (generation.questionScope === "brand_and_neutral_only" && ["competitor_direct", "brand_vs_competitor"].includes(question.objectType)) exclusionReason = "object_type_mismatch";
+    }
     if (!exclusionReason) {
       const containsBrand = [brandTruth.brandName, ...generation.brandAliases].some((name) => question.text.includes(name));
       const containsCompetitor = generation.competitors.some((name) => question.text.includes(name));

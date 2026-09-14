@@ -93,7 +93,7 @@ export default function App() {
     );
   return (
     <>
-      <aside className="test-banner" aria-label="数据环境">验收测试数据 · 不代表真实品牌运营结果</aside>
+      <aside className="test-banner" aria-label="数据环境">{data.environment === "real_brand_draft" ? "真实品牌问题草案 · 尚未进行答案采样" : "验收测试数据 · 不代表真实品牌运营结果"}</aside>
       <header>
         <div className="identity">
           <span className="brand-mark">A</span>

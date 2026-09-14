@@ -1,6 +1,6 @@
 # 问题智能意图卡：AI 游客问题拓展与版本化问题组
 
-状态：Gate A/B/C 已通过，Gate D 本地自动评测通过，待 Linux CI 与 Gate E 业务验收
+状态：Gate A/B/C/D 已通过，待 Gate E 业务验收
 日期：2026-09-14
 
 ## 用户问题
@@ -96,10 +96,11 @@
 - 最终完整隔离验证：14 个测试文件、67 项通过，0 失败、0 跳过；
 - PostgreSQL 16.14 冷备恢复通过，Redis 7.2.16 AOF 进程终止恢复通过；
 - 真实 DeepSeek 冒烟验证与完整测试同轮通过，证据目录：`C:\Users\ADMINI~1\AppData\Local\Temp\answertravel-v2-test-HIvwXR`；
-- Linux CI 尚未运行，当前不得表述为跨平台验证通过。
+- GitHub Linux CI：提交 `c7284e3344b07301c13c6f8baeaa57f58ff7df91`，Actions 运行 `34795739614`，Ubuntu `verify` 作业成功；
+- Linux CI 的 Node.js 24、PostgreSQL 16、Redis 7、`npm ci`、测试数据库迁移/角色初始化和 `npm run check:integration` 全部步骤为 `success`；
+- CI 使用合约化本地响应，不调用真实 DeepSeek 或注入真实密钥；真实 Provider 证据来自独立本地隔离冒烟验证。
 
 ## 下一门禁
 
-1. 提交并推送当前切片，运行 GitHub Linux CI；
-2. CI 成功后向用户展示问题智能的业务结果与当前限制；
-3. 用户通过 Gate E 后封版，才可进入 DeepSeek 真实答案采集切片。
+1. 向用户展示问题智能的业务结果与当前限制；
+2. 用户通过 Gate E 后封版，才可进入 DeepSeek 真实答案采集切片。

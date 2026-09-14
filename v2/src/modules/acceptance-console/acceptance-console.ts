@@ -376,7 +376,7 @@ export class AcceptanceConsoleRepository {
           conflicts: onboardingRow.package.conflicts,
           gaps: onboardingRow.package.gaps,
           readyForApproval: onboardingRow.package.gaps.length===0 && onboardingRow.package.facts.length>0 && onboardingRow.package.competitors.length>0,
-          truthDraft: { status: "draft", publicCandidateCount: onboardingRow.package.facts.filter((item:any)=>item.visibility === "public").length, excludedCount: onboardingRow.package.facts.filter((item:any)=>item.visibility !== "public").length, note: "仅公开候选事实进入草案；受限、自述、存疑和内部规则仍被排除，尚未批准。" },
+          truthDraft: { status: "draft", publicCandidateCount: onboardingRow.package.facts.filter((item:any)=>item.visibility === "public" && item.confidence === "high").length, excludedCount: onboardingRow.package.facts.filter((item:any)=>item.visibility !== "public" || item.confidence !== "high").length, note: "仅公开且达到当前证据门槛的候选事实进入草案；受限、自述、存疑和内部规则仍被排除，尚未批准。" },
         } : null,
         limitations: [
           "当前为验收测试数据，不代表真实品牌运营结果",

@@ -1,6 +1,6 @@
 # 品牌真相中心意图卡：冲突、缺口与公开范围
 
-状态：Gate A/B/C 已通过，Gate D 本地自动评测通过，待 Linux CI 与 Gate E 业务验收
+状态：Gate A/B/C/D 已通过，待 Gate E 业务验收
 日期：2026-09-14
 
 ## 用户问题
@@ -77,10 +77,10 @@
 - 修复后补强人工决策持久化场景，最终完整隔离验证：11 个测试文件、55 项通过，0 失败、0 跳过；
 - PostgreSQL 16.14 冷备恢复通过，Redis 7.2.16 AOF 进程终止恢复通过；
 - 结果文件：`C:\Users\ADMINI~1\AppData\Local\Temp\answertravel-v2-test-DEF1jo\vitest-results.json`；
-- Linux CI 尚未运行，当前不得表述为跨平台验证通过。
+- GitHub Linux CI：提交 `e82d9c555917bdda30b2bfc1804e8c548e0a7233`，Actions 运行 `34794524583`；Ubuntu `verify` 作业成功；
+- Linux CI 的 Node.js 24、PostgreSQL 16、Redis 7、`npm ci`、测试数据库迁移/角色初始化和 `npm run check:integration` 全部步骤为 `success`。
 
 ## 下一门禁
 
-1. 提交并推送当前切片，运行 GitHub Linux CI；
-2. CI 成功后向用户展示业务结果、失败边界和当前非目标；
-3. 用户通过 Gate E 后更新决策日志并封版。
+1. 向用户展示业务结果、失败边界和当前非目标；
+2. 用户通过 Gate E 后更新决策日志并封版。

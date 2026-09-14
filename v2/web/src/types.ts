@@ -1,5 +1,5 @@
 export type Overview = {
-  environment: "acceptance_test" | "real_brand_draft";
+  environment: "acceptance_test" | "real_brand_draft" | "real_brand_baseline";
   brand: {
     name: string;
     version: number;

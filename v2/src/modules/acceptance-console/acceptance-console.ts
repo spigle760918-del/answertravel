@@ -2,7 +2,7 @@ import type pg from "pg";
 import { withTenantTransaction } from "../../platform/database.js";
 
 export type AcceptanceOverview = {
-  environment: "acceptance_test" | "real_brand_draft";
+  environment: "acceptance_test" | "real_brand_draft" | "real_brand_baseline";
   brand: {
     name: string;
     version: number;
@@ -228,8 +228,9 @@ export class AcceptanceConsoleRepository {
         competitorCounts.set(entityId, (competitorCounts.get(entityId) ?? 0) + 1);
       const sentimentCounts = new Map<string, number>(); for (const claim of geoClaims.rows) sentimentCounts.set(claim.sentiment, (sentimentCounts.get(claim.sentiment) ?? 0) + 1);
       const isRealBrandDraft = b.brand_name === "北京珈程国际旅行社";
+      const hasRealAnswers = answers.rows.length > 0;
       return {
-        environment: isRealBrandDraft ? "real_brand_draft" : "acceptance_test",
+        environment: isRealBrandDraft ? (hasRealAnswers ? "real_brand_baseline" : "real_brand_draft") : "acceptance_test",
         brand: {
           name: b.brand_name,
           version: b.version,

@@ -65,8 +65,8 @@ export const questionGenerationResultSchema = z.object({ questions: z.array(gene
 
 export const questionGenerationRunSchema = z.object({
   id: z.string().uuid(), tenantId: z.string().uuid(), brandTruthCardId: z.string().uuid(), brandTruthVersion: z.number().int().positive(),
-  status: z.enum(["succeeded", "failed"]), provider: z.literal("deepseek"), model: z.string().trim().min(1).max(200),
-  promptVersion: z.enum(["question-expansion.v1", "question-expansion.v2"]), evidenceId: z.string().uuid(), errorCode: z.string().trim().min(1).max(120).nullable(),
+  status: z.enum(["succeeded", "failed"]), provider: z.enum(["deepseek", "user_approved_snapshot"]), model: z.string().trim().min(1).max(200),
+  promptVersion: z.enum(["question-expansion.v1", "question-expansion.v2", "question-snapshot.v1"]), evidenceId: z.string().uuid(), errorCode: z.string().trim().min(1).max(120).nullable(),
   requestedAt: z.string().datetime({ offset: true }), completedAt: z.string().datetime({ offset: true }),
 });
 

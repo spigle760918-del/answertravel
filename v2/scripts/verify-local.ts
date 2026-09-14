@@ -26,9 +26,12 @@ import { BrandTruthRepository } from "../src/modules/brand-truth/brand-truth-rep
 import { DeepSeekQuestionGenerator } from "../src/modules/question-intelligence/deepseek-question-generator.js";
 import { QuestionIntelligenceRepository } from "../src/modules/question-intelligence/question-intelligence-repository.js";
 import { QuestionIntelligenceService } from "../src/modules/question-intelligence/question-intelligence-service.js";
+import { JIACHENG_APPROVED_QUESTIONS } from "../src/modules/question-intelligence/jiacheng-question-snapshot.js";
 import {
   approveQuestionPanel,
+  createQuestionPanelDraft,
   questionPanelSchema,
+  questionGenerationRunSchema,
 } from "../src/modules/question-intelligence/question-intelligence.js";
 import { createObservationPlan } from "../src/modules/observation/observation.js";
 import { ObservationRepository } from "../src/modules/observation/observation-repository.js";
@@ -754,17 +757,59 @@ try {
           gaps:[],conflicts:pack.contradictions }));
         await new GeoIntelligenceRepository(realPool).createEntitySet(geoEntitySetSchema.parse({ id:randomUUID(),tenantId:realTenantId,version:1,status:"approved",createdAt:new Date().toISOString(),
           brand:{id:"brand",name:"北京珈程国际旅行社",aliases:[]},competitors:pack.competitors.map((competitor,index)=>({id:`competitor-${index+1}`,name:competitor.name,aliases:competitor.aliases})) }), "jiacheng-monitoring-scope");
-        const realPanel = await new QuestionIntelligenceService(new DeepSeekQuestionGenerator({apiKey:process.env.DEEPSEEK_API_KEY!,timeoutMs:60_000}),new EvidenceRepository(realPool),new QuestionIntelligenceRepository(realPool)).generateDraft({
-          id:randomUUID(),tenantId:realTenantId,panelId:randomUUID(),brandAliases:[],destinations:["北京"],competitors:pack.competitors.map((item)=>item.name),
-          questionScope:"brand_and_neutral_only",seedQuestions:["第一次来北京，5天4晚跟团游怎么选？","北京小团游如何判断是否纯玩？","北京珈程国际旅行社怎么样？","故宫门票预约不上时旅行社会怎样调整行程？","遇到暴雨、高温或交通延误时，北京跟团游如何改行程和退费？"],requestedTotal:20,promptVersion:"question-expansion.v2",createdAt:new Date().toISOString(),
-        },approvedTruth,pack.forbiddenExpressions);
-        if (realPanel.status !== "draft" || realPanel.candidates.length !== 20 || realPanel.mix.actualTotal !== 20) throw new Error("Real brand question draft did not produce exactly twenty accepted candidates.");
-        if (realPanel.mix.baseline.actual !== 12 || realPanel.mix.exploration.actual !== 5 || realPanel.mix.trigger.actual !== 3) throw new Error("Real brand question draft did not preserve the approved 12/5/3 role mix.");
-        if (realPanel.candidates.some((item)=>item.included && ["competitor_direct","brand_vs_competitor"].includes(item.objectType))) throw new Error("Competitor direct questions entered the real brand draft without authorization.");
+        const questionRepository = new QuestionIntelligenceRepository(realPool);
+        const evidence = new EvidenceRepository(realPool);
+        const generationId = randomUUID();
+        const panelId = randomUUID();
+        const createdAt = new Date().toISOString();
+        const generationInput = { id:generationId, tenantId:realTenantId, panelId, brandAliases:[], destinations:["北京"], competitors:pack.competitors.map((item)=>item.name),
+          questionScope:"brand_and_neutral_only" as const, seedQuestions:[], requestedTotal:20, promptVersion:"question-expansion.v2" as const, createdAt };
+        const snapshotEvidenceEnvelope = createEvidenceEnvelope({
+          tenantId: realTenantId,
+          artifactType: "question_panel.user_approved_snapshot",
+          factLevel: "F0",
+          schemaVersion: 1,
+          source: { system: "answertravel-v2-knowledge-base", reference: "docs/v2-knowledge-base/25-real-question-panel-intent-card.md", capturedAt: createdAt, surface: "manual" },
+          payload: { gate: "YES，通过真实游客问题组 Gate E", snapshotVersion: "question-snapshot.v1", questions: JIACHENG_APPROVED_QUESTIONS.map((item, index) => ({ index: index + 1, ...item })) },
+        });
+        const snapshotEvidence = await evidence.append(snapshotEvidenceEnvelope, { actorType: "user", actorId: "jiacheng-gate-e", traceId: generationId });
+        const run = await questionRepository.createRun(questionGenerationRunSchema.parse({ id:generationId, tenantId:realTenantId, brandTruthCardId:approvedTruth.id, brandTruthVersion:approvedTruth.version,
+          status:"succeeded", provider:"user_approved_snapshot", model:"not_applicable", promptVersion:"question-snapshot.v1", evidenceId:snapshotEvidence.id, errorCode:null, requestedAt:createdAt, completedAt:createdAt }), "jiacheng-gate-e");
+        const realDraft = createQuestionPanelDraft({ panelId, generationRunId:run.id, brandTruth:approvedTruth, generated:JIACHENG_APPROVED_QUESTIONS, generation:generationInput, forbiddenExpressions:pack.forbiddenExpressions, createdAt });
+        const draft = await questionRepository.createPanel(realDraft, "jiacheng-gate-e");
+        const realPanel = await questionRepository.createPanel(approveQuestionPanel(draft, [], new Date().toISOString()), "jiacheng-gate-e");
+        if (realPanel.status !== "approved" || realPanel.version !== 2 || realPanel.candidates.length !== 20 || realPanel.mix.actualTotal !== 20) throw new Error("Approved Jiacheng snapshot panel is incomplete.");
+        if (realPanel.mix.baseline.actual !== 12 || realPanel.mix.exploration.actual !== 5 || realPanel.mix.trigger.actual !== 3) throw new Error("Approved Jiacheng snapshot panel did not preserve 12/5/3.");
+        const observationRepository = new ObservationRepository(realPool);
+        const observation = createObservationPlan({ id:randomUUID(), panel:realPanel, cycleKey:"jiacheng-real-baseline-1", rules:{ version:"deepseek-sampling.v1", rounds:2, language:"简体中文", regionContext:"中国大陆游客计划北京旅行", temperature:0.2, maxTokens:1000, timeoutMs:60_000, maxAttempts:3, maxTotalTokens:60_000 }, createdAt:new Date().toISOString() });
+        if (observation.targets.length !== 40) throw new Error("Jiacheng baseline must plan exactly 40 samples.");
+        await observationRepository.createPlan(observation.plan, observation.targets);
+        const producer = createObservationQueue(redisUrl);
+        const citations = createCitationSourceWorker(redisUrl, realPool);
+        const geoIntelligence = createGeoIntelligenceWorker(redisUrl, realPool);
+        const geoDecisions = createGeoDecisionWorker(redisUrl, realPool);
+        const consumer = createObservationWorker(redisUrl, realPool, process.env.DEEPSEEK_API_KEY!);
+        try {
+          await Promise.all([citations.worker.waitUntilReady(), geoIntelligence.worker.waitUntilReady(), geoDecisions.worker.waitUntilReady(), consumer.worker.waitUntilReady()]);
+          const jobs = await Promise.all(observation.targets.map((target)=>enqueueObservation(producer.queue, observationJob(target))));
+          for (let poll=0; poll<900; poll++) {
+            const states=await Promise.all(jobs.map((job)=>job.getState()));
+            if (states.every((state)=>state === "completed" || state === "failed")) break;
+            if (poll===899) throw new Error("Jiacheng real observation timed out.");
+            await delay(500);
+          }
+        } finally { await consumer.close(); await citations.close(); await geoIntelligence.close(); await geoDecisions.close(); await producer.close(); }
+        let counts = { answers:"0", scans:"0", geo:"0" };
+        for (let poll=0; poll<240; poll++) {
+          const result = await withTenantTransaction(realPool,realTenantId,(client)=>client.query<{answers:string;scans:string;geo:string}>(`select (select count(*) from raw_answers)::text answers,(select count(*) from citation_scans)::text scans,(select count(*) from geo_analysis_runs where status='completed')::text geo`));
+          counts = result.rows[0] ?? counts;
+          if (Number(counts.scans) >= Number(counts.answers) && Number(counts.geo) >= Number(counts.answers) && Number(counts.answers) + Number(counts.geo) > 0) break;
+          await delay(500);
+        }
         const realAnswers = await withTenantTransaction(realPool,realTenantId,(client)=>client.query<{count:string}>("select count(*)::text count from raw_answers"));
-        if (realAnswers.rows[0]?.count !== "0") throw new Error("Real brand question drafting must not collect answers.");
+        if (realAnswers.rows[0]?.count !== counts.answers) throw new Error("Jiacheng answer count changed during finalization.");
         acceptanceTenantId = realTenantId;
-        console.log(`PASS: Beijing Jiacheng real question draft stored ${realPanel.candidates.length} candidates; ${realPanel.mix.actualTotal} passed deterministic gates; zero answers collected.`);
+        console.log(`PASS: Beijing Jiacheng real baseline planned 40 DeepSeek API samples; answers=${counts.answers}, citationScans=${counts.scans}, geoAnalyses=${counts.geo}. Failures remain visible if any.`);
       } finally { await realPool.end(); }
     }
   }

@@ -38,7 +38,7 @@
 - 尝试启动一次性 `systemd-run` 隔离单元时，宝塔/主机安全层拒绝最小 shell 探针：`systemd-run` 返回 `status=203/EXEC`，完整尝试被终止为 `signal=SEGV`。这不是 V2 测试断言失败，也不是业务服务异常。
 - 尝试用既有 `www` 用户直接运行时，安全层对 `runuser`、`su` 及子进程返回 `Your request has been recorded. Tips from BT security !!!`，导致脚本在进入下载/安装前被阻断。未绕过该安全策略。
 - 验证后的只读检查显示 `nginx=active`、`mysql=active`，80、443、3306、41927 监听仍在；未重启、安装或改动这些服务。
-- 服务器实机 Linux 验证结论：`blocked-by-host-policy`。不得把它记为 Linux 通过；Windows 本地 `33 passed / 0 failed / 0 skipped` 仍为当前唯一完整实测结果。
+- 服务器实机 Linux 验证结论：`blocked-by-host-policy`，不得把它记为阿里云原生验证通过。此后同一 V2 提交已通过 GitHub Ubuntu CI；Windows 本地仍为 `33 passed / 0 failed / 0 skipped`，两类证据分别记录。
 
 ## 保留证据与清理边界
 

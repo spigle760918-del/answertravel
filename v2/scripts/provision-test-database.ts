@@ -16,6 +16,8 @@ export async function provisionTestDatabase(adminUrl: string, password: string):
     await pool.query(`create role ${pg.escapeIdentifier(role)} login nosuperuser nobypassrls nocreatedb nocreaterole password ${pg.escapeLiteral(password)}`);
     await pool.query(`grant usage on schema public to ${pg.escapeIdentifier(role)}`);
     await pool.query(`grant select on tenants to ${pg.escapeIdentifier(role)}`);
+    // Extra mutation grants exercise append-only guards; production needs SELECT/INSERT only.
+    await pool.query(`grant select, insert, update, delete, truncate on brand_truth_cards to ${pg.escapeIdentifier(role)}`);
     // Extra mutation grants exercise database triggers; production needs SELECT/INSERT only.
     await pool.query(`grant select, insert, update, delete, truncate on evidence_artifacts, audit_events to ${pg.escapeIdentifier(role)}`);
   } finally {

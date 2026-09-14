@@ -78,6 +78,7 @@
 
 ## 3. 内部项目资料
 
+- `https://github.com/spigle760918-del/answertravel`：AnswerTravel V2 当前 GitHub CI 仓库；2026-09-13 核验提交 `c2a802ce1db27eb186c6626df72d4bfdfb0c3e63`，两个 V2 Linux CI 运行成功。该公开仓库不得提交 API Key、品牌私密资料或服务器凭据。
 - `docs/AnswerTravel-PRD.md`：V1 产品目标和业务流程参考。
 - `docs/AnswerTravel-品牌优化诊断方法.md`：已有提及率、竞品、来源和内容任务书方法参考。
 - `docs/AnswerTravel-上线差距与实施计划.md`：V1 真实能力与演示边界。

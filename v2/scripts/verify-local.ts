@@ -36,6 +36,8 @@ import { createCitationSourceWorker } from "../src/modules/citation-source/citat
 import { createGeoIntelligenceWorker } from "../src/modules/geo-intelligence/geo-intelligence-queue.js";
 import { GeoIntelligenceRepository } from "../src/modules/geo-intelligence/geo-intelligence-repository.js";
 import { geoEntitySetSchema } from "../src/modules/geo-intelligence/geo-intelligence.js";
+import { createGeoDecisionWorker } from "../src/modules/geo-decision/geo-gap-decision-queue.js";
+import { GeoGapDecisionRepository } from "../src/modules/geo-decision/geo-gap-decision-repository.js";
 import {
   createObservationQueue,
   createObservationWorker,
@@ -315,6 +317,16 @@ try {
     [resolve("node_modules/typescript/bin/tsc"), "--noEmit"],
     { env, visible: true },
   );
+  await run(
+    process.execPath,
+    [resolve("node_modules/typescript/bin/tsc"), "-p", resolve("web/tsconfig.json"), "--noEmit"],
+    { env, visible: true },
+  );
+  await run(
+    process.execPath,
+    [resolve("node_modules/vite/bin/vite.js"), "build", "--config", resolve("web/vite.config.ts")],
+    { env, visible: true },
+  );
   const selection = databaseOnly
     ? [
         "tests/contracts",
@@ -539,6 +551,7 @@ try {
       const producer = createObservationQueue(redisUrl);
       const citations = createCitationSourceWorker(redisUrl, smokePool);
       const geoIntelligence = createGeoIntelligenceWorker(redisUrl, smokePool);
+      const geoDecisions = createGeoDecisionWorker(redisUrl, smokePool);
       const consumer = createObservationWorker(
         redisUrl,
         smokePool,
@@ -547,6 +560,7 @@ try {
       try {
         await citations.worker.waitUntilReady();
         await geoIntelligence.worker.waitUntilReady();
+        await geoDecisions.worker.waitUntilReady();
         await consumer.worker.waitUntilReady();
         const selectedTargets = [
           observation.targets[0],
@@ -603,10 +617,17 @@ try {
           if (poll === 119) throw new Error("GEO analysis did not complete for all real answers.");
           await delay(250);
         }
+        for (let poll = 0; poll < 120; poll++) {
+          const decision = await new GeoGapDecisionRepository(smokePool).latest(smokeTenantId);
+          if (decision?.diagnosis.sampleCount === 4) break;
+          if (poll === 119) throw new Error("GEO gap decision did not complete for the real evidence set.");
+          await delay(250);
+        }
       } finally {
         await consumer.close();
         await citations.close();
         await geoIntelligence.close();
+        await geoDecisions.close();
         await producer.close();
       }
       const answerCount = await withTenantTransaction(

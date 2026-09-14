@@ -105,6 +105,20 @@ export type AcceptanceOverview = {
     claimSentiments: Array<{ sentiment: string; count: number }>;
     note: string;
   };
+  decisionIntelligence: null | {
+    rulesVersion: "geo-gap-decision.v1";
+    factLevel: string;
+    evidenceStatus: string;
+    sampleCount: number;
+    observationPlanCount: number;
+    primaryRootCause: string;
+    summary: string;
+    alternatives: string[];
+    missingEvidence: string[];
+    strongestCompetitor: null | { entityId: string; entityName: string; mentionCount: number };
+    actions: Array<{ actionType: string; factLevel: string; title: string; rationale: string; priority: string; risk: string; requiresApproval: boolean; ownerType: string; expectedWindow: string; successMetric: string }>;
+    deepDive: { decision: string; factLevel: string; reason: string; proposedSampleBudget: number; questionThemes: string[]; stopConditions: string[]; requiresApproval: boolean };
+  };
   limitations: string[];
 };
 
@@ -147,6 +161,10 @@ export class AcceptanceConsoleRepository {
       const geoMentions = await client.query(`select run_id,entity_id,entity_role,matched_alias,excerpt,certainty from geo_entity_mentions`);
       const geoRankings = await client.query(`select run_id,entity_id,applicability,rank,reason,evidence_excerpt from geo_ranking_facts`);
       const geoClaims = await client.query(`select run_id,entity_id,claim_text,sentiment,certainty from geo_claim_facts`);
+      const diagnosis = await client.query(`select * from geo_diagnosis_snapshots where rules_version='geo-gap-decision.v1' order by created_at desc,id desc limit 1`);
+      const diagnosisRow = diagnosis.rows[0];
+      const decisionActions = diagnosisRow ? await client.query(`select * from geo_action_proposals where diagnosis_id=$1 order by case priority when 'high' then 1 when 'medium' then 2 else 3 end,created_at,id`, [diagnosisRow.id]) : { rows: [] };
+      const deepDive = diagnosisRow ? await client.query(`select * from competitor_deep_dive_recommendations where diagnosis_id=$1 limit 1`, [diagnosisRow.id]) : { rows: [] };
       const failures = await client.query(
         `select t.question_text,t.round,a.status,a.error_code,a.attempt,a.completed_at from observation_attempts a join observation_targets t on t.tenant_id=a.tenant_id and t.id=a.target_id where a.status<>'succeeded' order by a.completed_at desc`,
       );
@@ -290,11 +308,26 @@ export class AcceptanceConsoleRepository {
           claimSentiments: [...sentimentCounts.entries()].map(([sentiment, count]) => ({ sentiment, count })),
           note: "仅统计中性品类问题的自然提及；品牌/竞品直问不进入该分母。",
         },
+        decisionIntelligence: diagnosisRow ? {
+          rulesVersion: diagnosisRow.rules_version,
+          factLevel: diagnosisRow.fact_level,
+          evidenceStatus: diagnosisRow.evidence_status,
+          sampleCount: diagnosisRow.sample_count,
+          observationPlanCount: diagnosisRow.observation_plan_count,
+          primaryRootCause: diagnosisRow.primary_root_cause,
+          summary: diagnosisRow.summary,
+          alternatives: diagnosisRow.alternatives,
+          missingEvidence: diagnosisRow.missing_evidence,
+          strongestCompetitor: diagnosisRow.strongest_competitor_id ? { entityId: diagnosisRow.strongest_competitor_id, entityName: entityNames.get(diagnosisRow.strongest_competitor_id) ?? diagnosisRow.strongest_competitor_id, mentionCount: diagnosisRow.strongest_competitor_mention_count } : null,
+          actions: decisionActions.rows.map((action) => ({ actionType:action.action_type,factLevel:action.fact_level,title:action.title,rationale:action.rationale,priority:action.priority,risk:action.risk,requiresApproval:action.requires_approval,ownerType:action.owner_type,expectedWindow:action.expected_window,successMetric:action.success_metric })),
+          deepDive: { decision:deepDive.rows[0].decision,factLevel:deepDive.rows[0].fact_level,reason:deepDive.rows[0].reason,proposedSampleBudget:deepDive.rows[0].proposed_sample_budget,questionThemes:deepDive.rows[0].question_themes,stopConditions:deepDive.rows[0].stop_conditions,requiresApproval:deepDive.rows[0].requires_approval },
+        } : null,
         limitations: [
           "当前为验收测试数据，不代表真实品牌运营结果",
           "当前仅验证 DeepSeek API，不代表 DeepSeek Web/App 搜索表现",
           "当前仅提供基础提及、条件化排名和规则型主张情感，不代表完整 GEO 决策或趋势",
           "引用候选与页面快照不等于内容被模型吸收或产生因果影响",
+          "差距诊断当前先执行确定性证据门禁；网站诊断尚未接入时会明确显示缺失，不由 AI 猜测",
         ],
       };
     });

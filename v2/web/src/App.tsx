@@ -2,12 +2,13 @@ import { useEffect, useMemo, useState } from "react";
 import type { Overview } from "./types";
 import { StatusPill } from "./components/StatusPill";
 import { AnswerDrawer } from "./components/AnswerDrawer";
-type Tab = "overview" | "truth" | "questions" | "geo" | "runs";
+type Tab = "overview" | "truth" | "questions" | "geo" | "decision" | "runs";
 const tabs: Array<[Tab, string]> = [
   ["overview", "项目概览"],
   ["truth", "品牌真相"],
   ["questions", "游客问题"],
   ["geo", "GEO 情报"],
+  ["decision", "决策建议"],
   ["runs", "采集与回答"],
 ];
 const percent = (value: number | null) =>
@@ -18,6 +19,23 @@ const sentimentLabels: Record<string, string> = {
   neutral: "中性",
   mixed: "正负并存",
   uncertain: "不确定",
+};
+const rootCauseLabels: Record<string, string> = {
+  sampling_insufficient: "样本与周期不足",
+  brand_truth_gap: "品牌事实缺口",
+  product_service_gap: "产品服务真实差距",
+  website_structure_gap: "官网结构差距",
+  content_coverage_gap: "内容覆盖差距",
+  external_source_gap: "外部信源差距",
+  reputation_risk: "口碑与风险",
+  model_volatility: "模型波动",
+  competitor_reason_unclear: "竞品领先原因不清",
+  no_action: "暂无需行动",
+};
+const deepDiveLabels: Record<string, string> = {
+  no_trigger: "暂不深挖",
+  expand_sample: "先扩充中性样本",
+  recommend_approval: "建议深挖，等待确认",
 };
 export default function App() {
   const [data, setData] = useState<Overview | null>(null);
@@ -330,6 +348,78 @@ export default function App() {
                 </div>
               </section>
             </>
+          )}
+          {tab === "decision" && (
+            data.decisionIntelligence ? (
+              <>
+                <section className="panel decision-hero">
+                  <div className="panel-head">
+                    <div>
+                      <p className="eyebrow">AI 决策前证据门禁</p>
+                      <h1>为什么这样判断，下一步做什么</h1>
+                    </div>
+                    <div>
+                      <StatusPill value={data.decisionIntelligence.factLevel} />
+                      <StatusPill value={data.decisionIntelligence.rulesVersion} tone="good" />
+                    </div>
+                  </div>
+                  <div className="decision-summary">
+                    <StatusPill
+                      value={data.decisionIntelligence.evidenceStatus === "sufficient" ? "证据可行动" : "证据不足"}
+                      tone={data.decisionIntelligence.evidenceStatus === "sufficient" ? "good" : "warn"}
+                    />
+                    <h2>{rootCauseLabels[data.decisionIntelligence.primaryRootCause] ?? data.decisionIntelligence.primaryRootCause}</h2>
+                    <p>{data.decisionIntelligence.summary}</p>
+                  </div>
+                </section>
+                <section className="stat-grid decision-stats">
+                  <article><span>中性有效样本</span><strong>{data.decisionIntelligence.sampleCount}</strong><small>最低行动门槛：6</small></article>
+                  <article><span>可比较观察周期</span><strong>{data.decisionIntelligence.observationPlanCount}</strong><small>最低行动门槛：2</small></article>
+                  <article><span>内容方向</span><strong>{data.decisionIntelligence.actions[0]?.actionType === "expand_sampling" ? "暂不写" : "有建议"}</strong><small>先判断根因再产内容</small></article>
+                  <article><span>竞对深挖</span><strong>{deepDiveLabels[data.decisionIntelligence.deepDive.decision] ?? data.decisionIntelligence.deepDive.decision}</strong><small>与中性指标隔离</small></article>
+                </section>
+                <section className="decision-grid">
+                  <article className="panel">
+                    <p className="eyebrow">建议动作</p>
+                    <h2>当前优先做什么</h2>
+                    {data.decisionIntelligence.actions.map((action) => (
+                      <div className="action-card" key={`${action.actionType}-${action.title}`}>
+                        <div>
+                          <StatusPill value={action.priority === "high" ? "高优先级" : action.priority} tone={action.priority === "high" ? "warn" : "neutral"} />
+                          <StatusPill value={action.requiresApproval ? "需要 Yes/No" : "可自动观察"} tone={action.requiresApproval ? "warn" : "good"} />
+                        </div>
+                        <h3>{action.title}</h3>
+                        <p>{action.rationale}</p>
+                        <dl><div><dt>预计窗口</dt><dd>{action.expectedWindow}</dd></div><div><dt>验收指标</dt><dd>{action.successMetric}</dd></div></dl>
+                      </div>
+                    ))}
+                  </article>
+                  <article className="panel">
+                    <p className="eyebrow">竞对深挖决定</p>
+                    <h2>{deepDiveLabels[data.decisionIntelligence.deepDive.decision] ?? data.decisionIntelligence.deepDive.decision}</h2>
+                    <p>{data.decisionIntelligence.deepDive.reason}</p>
+                    {data.decisionIntelligence.deepDive.proposedSampleBudget > 0 ? <p className="budget">建议新增样本预算：{data.decisionIntelligence.deepDive.proposedSampleBudget}</p> : null}
+                    {data.decisionIntelligence.deepDive.questionThemes.length ? <><h3>独立问题主题</h3><ul>{data.decisionIntelligence.deepDive.questionThemes.map((item) => <li key={item}>{item}</li>)}</ul></> : null}
+                    <h3>自动停止条件</h3>
+                    <ul>{data.decisionIntelligence.deepDive.stopConditions.map((item) => <li key={item}>{item}</li>)}</ul>
+                  </article>
+                </section>
+                <section className="decision-grid">
+                  <article className="panel">
+                    <p className="eyebrow">替代解释</p>
+                    <h2>还可能是什么原因</h2>
+                    <ul>{data.decisionIntelligence.alternatives.map((item) => <li key={item}>{item}</li>)}</ul>
+                  </article>
+                  <article className="panel">
+                    <p className="eyebrow">尚缺证据</p>
+                    <h2>系统不会猜测的部分</h2>
+                    {data.decisionIntelligence.missingEvidence.length ? <ul>{data.decisionIntelligence.missingEvidence.map((item) => <li key={item}>{item}</li>)}</ul> : <p className="empty">当前决策所需证据已接入。</p>}
+                  </article>
+                </section>
+              </>
+            ) : (
+              <section className="panel"><h1>决策尚未生成</h1><p className="empty">等待基础 GEO 情报完成后自动评估，不使用模拟建议填充。</p></section>
+            )
           )}
           {tab === "runs" && (
             <>

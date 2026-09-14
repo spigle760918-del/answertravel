@@ -469,6 +469,59 @@ nav button.active {
   padding: 13px 14px;
   border-bottom: 1px solid var(--line);
 }
+.decision-summary {
+  max-width: 820px;
+}
+.decision-summary h2 {
+  font-size: 29px;
+  margin: 14px 0 8px;
+}
+.decision-summary p,
+.decision-grid p,
+.decision-grid li {
+  color: var(--muted);
+  line-height: 1.7;
+}
+.decision-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+.action-card {
+  margin-top: 20px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  background: #f8faf7;
+}
+.action-card h3 {
+  font-size: 21px;
+  margin: 14px 0 6px;
+}
+.action-card dl {
+  margin: 18px 0 0;
+  border-top: 1px solid var(--line);
+}
+.action-card dl div {
+  display: grid;
+  grid-template-columns: 90px 1fr;
+  padding: 10px 0;
+}
+.action-card dt {
+  color: var(--muted);
+  font-size: 12px;
+}
+.action-card dd {
+  margin: 0;
+  font-size: 13px;
+}
+.budget {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #fff0cd;
+  color: #684d0d !important;
+  font-weight: 700;
+}
 .citation-evidence h3 {
   margin: 7px 0 14px;
 }
@@ -613,6 +666,10 @@ nav button.active {
     grid-template-columns: 1fr;
   }
   .geo-grid {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .decision-grid {
     grid-template-columns: 1fr;
     gap: 0;
   }

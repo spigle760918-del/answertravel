@@ -127,5 +127,42 @@ export type Overview = {
     claimSentiments: Array<{ sentiment: string; count: number }>;
     note: string;
   };
+  decisionIntelligence: null | {
+    rulesVersion: "geo-gap-decision.v1";
+    factLevel: string;
+    evidenceStatus: string;
+    sampleCount: number;
+    observationPlanCount: number;
+    primaryRootCause: string;
+    summary: string;
+    alternatives: string[];
+    missingEvidence: string[];
+    strongestCompetitor: null | {
+      entityId: string;
+      entityName: string;
+      mentionCount: number;
+    };
+    actions: Array<{
+      actionType: string;
+      factLevel: string;
+      title: string;
+      rationale: string;
+      priority: string;
+      risk: string;
+      requiresApproval: boolean;
+      ownerType: string;
+      expectedWindow: string;
+      successMetric: string;
+    }>;
+    deepDive: {
+      decision: string;
+      factLevel: string;
+      reason: string;
+      proposedSampleBudget: number;
+      questionThemes: string[];
+      stopConditions: string[];
+      requiresApproval: boolean;
+    };
+  };
   limitations: string[];
 };

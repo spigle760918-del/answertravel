@@ -12,6 +12,8 @@ import { CitationSourceRepository } from "../../src/modules/citation-source/cita
 import { createGeoIntelligenceWorker } from "../../src/modules/geo-intelligence/geo-intelligence-queue.js";
 import { GeoIntelligenceRepository } from "../../src/modules/geo-intelligence/geo-intelligence-repository.js";
 import { geoEntitySetSchema } from "../../src/modules/geo-intelligence/geo-intelligence.js";
+import { createGeoDecisionWorker } from "../../src/modules/geo-decision/geo-gap-decision-queue.js";
+import { GeoGapDecisionRepository } from "../../src/modules/geo-decision/geo-gap-decision-repository.js";
 import { createObservationPlan } from "../../src/modules/observation/observation.js";
 import {
   createObservationQueue,
@@ -40,10 +42,12 @@ integration("durable DeepSeek observations", () => {
   const observations = new ObservationRepository(pool);
   const citations = new CitationSourceRepository(pool);
   const geo = new GeoIntelligenceRepository(pool);
+  const decisions = new GeoGapDecisionRepository(pool);
   let producer: ReturnType<typeof createObservationQueue>;
   let consumer: ReturnType<typeof createObservationWorker>;
   let citationConsumer: ReturnType<typeof createCitationSourceWorker>;
   let geoConsumer: ReturnType<typeof createGeoIntelligenceWorker>;
+  let decisionConsumer: ReturnType<typeof createGeoDecisionWorker>;
   let calls = 0;
   let targets: any[] = [];
   const fetchImpl = (async () => {
@@ -216,15 +220,18 @@ integration("durable DeepSeek observations", () => {
         )) as typeof fetch,
     });
     geoConsumer = createGeoIntelligenceWorker(redisUrl!, pool);
+    decisionConsumer = createGeoDecisionWorker(redisUrl!, pool);
     consumer = createObservationWorker(redisUrl!, pool, "test-key", fetchImpl);
     await citationConsumer.worker.waitUntilReady();
     await geoConsumer.worker.waitUntilReady();
+    await decisionConsumer.worker.waitUntilReady();
     await consumer.worker.waitUntilReady();
   });
   afterAll(async () => {
     await consumer?.close();
     await citationConsumer?.close();
     await geoConsumer?.close();
+    await decisionConsumer?.close();
     await producer?.close();
     await pool.end();
     await admin.end();
@@ -311,6 +318,12 @@ integration("durable DeepSeek observations", () => {
       ]),
     );
     expect(await geo.runForAnswer(randomUUID(), answer!.id)).toBeNull();
+    await vi.waitFor(async () => expect(await decisions.latest(tenantId)).not.toBeNull(), { timeout: 10_000 });
+    const decision = await decisions.latest(tenantId);
+    expect(decision?.diagnosis).toMatchObject({ evidenceStatus: "insufficient", primaryRootCause: "sampling_insufficient", sampleCount: 1 });
+    expect(decision?.actions[0]).toMatchObject({ actionType: "expand_sampling", requiresApproval: true });
+    expect(decision?.deepDive).toMatchObject({ decision: "expand_sample", requiresApproval: true });
+    expect(await decisions.latest(randomUUID())).toBeNull();
     const overview = await new AcceptanceConsoleRepository(pool).overview(tenantId);
     expect(overview.observations.answers.find((item) => item.id === answer!.id)?.citationEvidence.events[0]?.snapshot).toMatchObject({
       status: "succeeded",
@@ -355,6 +368,9 @@ integration("durable DeepSeek observations", () => {
       withTenantTransaction(pool, tenantId, (client) =>
         client.query("update citation_scans set candidate_count=0 where answer_id=$1", [answer!.id]),
       ),
+    ).rejects.toThrow("append-only");
+    await expect(
+      withTenantTransaction(pool, tenantId, (client) => client.query("update geo_diagnosis_snapshots set summary='changed' where id=$1", [decision!.diagnosis.id])),
     ).rejects.toThrow("append-only");
     await expect(
       withTenantTransaction(pool, tenantId, (client) =>

@@ -7,6 +7,7 @@ import { createFoundationWorker } from "./platform/foundation-queue.js";
 import { createObservationWorker } from "./modules/observation/observation-queue.js";
 import { createCitationSourceWorker } from "./modules/citation-source/citation-source-queue.js";
 import { createGeoIntelligenceWorker } from "./modules/geo-intelligence/geo-intelligence-queue.js";
+import { createGeoDecisionWorker } from "./modules/geo-decision/geo-gap-decision-queue.js";
 
 const config = loadConfig();
 const pool = createDatabasePool(config.DATABASE_URL);
@@ -25,12 +26,14 @@ const citations = createCitationSourceWorker(config.REDIS_URL, pool, {
     .filter(Boolean),
 });
 const geoIntelligence = createGeoIntelligenceWorker(config.REDIS_URL, pool);
+const geoDecisions = createGeoDecisionWorker(config.REDIS_URL, pool);
 
 async function shutdown(): Promise<void> {
   await runtime.close();
   await observations?.close();
   await citations.close();
   await geoIntelligence.close();
+  await geoDecisions.close();
   await pool.end();
 }
 

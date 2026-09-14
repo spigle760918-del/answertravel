@@ -92,4 +92,4 @@
 - 完整本地验证为 20 个测试文件、91/91 通过，0 失败、0 跳过；PostgreSQL 冷备恢复、Redis AOF 恢复、主系统/Web 类型检查和生产构建通过。
 - 集成测试覆盖提及与主张落库、排名不适用、幂等重放、历史不可修改、跨租户不可见和验收 API 下钻；依赖公告审计为 0 个已知漏洞，跟踪文件未发现真实密钥。
 - 浏览器验证覆盖 1440×900 桌面、390×844 手机、GEO 情报页、回答下钻、排名不适用、零提及空状态、无横向溢出和错误覆盖层；页面错误为 0，axe 审计 0 项违规。截图保存在 `v2/artifacts/acceptance-console/geo-intelligence-*.png`。
-- 当前仅完成 Gate A-D。Linux CI 尚待本次提交后验证，Gate E 必须由用户实际查看网页并 Yes/No；阿里云原生验证继续保持 `blocked-by-host-policy`，不得冒充通过。
+- 提交 `521a86107ead29b895116097379dfceedd16ffa1` 已推送，GitHub Linux CI `34817924116` 成功。当前仅完成 Gate A-D，Gate E 必须由用户实际查看网页并 Yes/No；阿里云原生验证继续保持 `blocked-by-host-policy`，不得冒充通过。

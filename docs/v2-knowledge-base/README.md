@@ -35,6 +35,7 @@
 | `15-question-intelligence-intent-card.md` | AI 游客问题拓展与版本化问题组 | Gate A-F 已通过并封版 |
 | `16-deepseek-observation-intent-card.md` | DeepSeek API 真实答案采集与不可变证据 | Gate A-F 已通过并封版 |
 | `17-visible-acceptance-console-intent-card.md` | 面向文旅负责人的 V2 可视化验收台 | Gate A-F 已通过并封版 |
+| `18-citation-source-evidence-intent-card.md` | 回答引用候选、来源快照与安全抓取证据 | Gate A 待用户确认 |
 
 ## 事实分级
 

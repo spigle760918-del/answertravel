@@ -57,7 +57,7 @@
 - 契约：退款证据缺口被映射为7个事实主题，并提供“已有现行政策”和“暂无统一政策”2条诚实路径。
 - 真实数据库：首次创建 `idempotent=false`，复跑 `idempotent=true`，两次均返回同一不可变采集卡。
 - 真实结果：`status=waiting_facts`、来源缺口7、采集字段7、待补资料7、`summaryDraftAuthorized=false`、`publicationAuthorized=false`。
-- 自动验证：Node.js 24 下32个测试文件、136/136测试通过；PostgreSQL冷备恢复、Redis AOF恢复和Web生产构建通过。
+- 自动验证：Node.js 24 下32个测试文件、136/136测试通过；PostgreSQL冷备恢复、Redis AOF恢复和Web生产构建通过。实现提交 `34777ecf3b225b054b15f2cf3510f00a0d765a56` 的 GitHub Linux CI `34933275035` 成功。
 - 可视化验收：`http://127.0.0.1:4280/` 已接入真实验收数据库。独立自动浏览器通道连续连接失败，因此未将自动视觉检查标为通过；应用内浏览器已打开该页面供业务验收。
 - 未调用 DeepSeek，未读取尚未提供的合同，未修改官网，未发布。
 - 阿里云原生验证继续标记为 `blocked-by-host-policy`。

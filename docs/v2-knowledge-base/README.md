@@ -50,7 +50,8 @@
 | `30-optimization-action-plan-intent-card.md` | 优化行动计划、依赖与最小审批 | Gate A-F 已通过并封版 |
 | `31-trust-evidence-blueprint-intent-card.md` | 资质可信证据清单与官网事实区蓝图 | Gate A-F 已通过并封版 |
 | `32-trust-source-verification-intent-card.md` | 资质来源独立核验与补证状态 | Gate A-F 已通过并封版 |
-| `33-refund-policy-intake-intent-card.md` | 退款、取消与履约政策事实采集 | Gate A-D 已完成，Gate E 待验收 |
+| `33-refund-policy-intake-intent-card.md` | 退款、取消与履约政策事实采集 | Gate A-F 已通过并封版 |
+| `34-configurable-action-fact-intake-intent-card.md` | 品牌个性化行动事实采集框架 | Gate A-D 已完成，Gate E 待验收 |
 
 ## 事实分级
 

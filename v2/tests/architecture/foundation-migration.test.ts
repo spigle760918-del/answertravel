@@ -116,4 +116,13 @@ describe("foundation migration guardrails", () => {
     expect(sql).toContain("publication_authorized=false");
     expect(sql).toContain("force row level security");
   });
+  it("keeps personalized action fact intake immutable and blocks premature drafts or publication", async () => {
+    const sql = await readFile(resolve(process.cwd(), "migrations/0021_action_fact_intake.sql"), "utf8");
+    expect(sql).toContain("action_fact_intake_snapshots_append_only");
+    expect(sql).toContain("personalization_mode='diagnosis_driven'");
+    expect(sql).toContain("fact_draft_authorized=false");
+    expect(sql).toContain("publication_authorized=false");
+    expect(sql).toContain("force row level security");
+    expect(sql).toContain("action_fact_intake_snapshots_tenant_isolation");
+  });
 });

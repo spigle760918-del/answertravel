@@ -26,6 +26,7 @@
     "trust:blueprint": "tsx scripts/create-trust-evidence-blueprint.ts",
     "trust:verify-sources": "tsx scripts/verify-trust-sources.ts",
     "refund:intake": "tsx scripts/create-refund-policy-intake.ts",
+    "facts:intake": "tsx scripts/create-action-fact-intake.ts",
     "dev:api": "tsx watch src/main.ts",
     "dev:worker": "tsx watch src/worker.ts",
     "start:api": "tsx src/main.ts",

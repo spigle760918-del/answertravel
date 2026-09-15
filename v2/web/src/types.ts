@@ -1,6 +1,6 @@
 export type Overview = {
   environment: "acceptance_test" | "real_brand_draft" | "real_brand_baseline";
-  alphaReadiness:{rulesVersion:"alpha-readiness.v1";overallStatus:"ready"|"pending"|"blocked";summary:string;items:Array<{key:string;label:string;status:"ready"|"pending"|"blocked"|"not_in_alpha";evidence:string;requiredForLaunch:boolean}>;readyCount:number;pendingCount:number;blockedCount:number;notInAlphaCount:number};
+  alphaReadiness?:{rulesVersion:"alpha-readiness.v1";overallStatus:"ready"|"pending"|"blocked";summary:string;items:Array<{key:string;label:string;status:"ready"|"pending"|"blocked"|"not_in_alpha";evidence:string;requiredForLaunch:boolean}>;readyCount:number;pendingCount:number;blockedCount:number;notInAlphaCount:number};
   brand: {
     name: string;
     version: number;

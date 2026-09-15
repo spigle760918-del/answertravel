@@ -96,6 +96,24 @@ export default function App() {
         <p>正在读取真实验收数据…</p>
       </main>
     );
+  const fallbackItems:Array<{key:string;label:string;status:"ready"|"pending"|"blocked"|"not_in_alpha";evidence:string;requiredForLaunch:boolean}>=[
+    {key:"brand_truth",label:"真实品牌真相",status:data.brand.status==="approved"?"ready":"pending",evidence:`品牌真相 V${data.brand.version} · ${data.brand.status}`,requiredForLaunch:true},
+    {key:"question_panel",label:"真实游客问题组",status:data.questions.status==="approved"?"ready":"pending",evidence:`问题组 V${data.questions.panelVersion} · ${data.questions.items.filter(x=>x.included).length} 条`,requiredForLaunch:true},
+    {key:"deepseek_api",label:"DeepSeek API 真实采样",status:data.observations.answers.length?"ready":"pending",evidence:data.observations.answers.length?`${data.observations.answers.length} 条成功回答可下钻`:"尚无真实回答",requiredForLaunch:true},
+    {key:"evidence_chain",label:"不可变证据与指标下钻",status:data.observations.answers.length?"ready":"pending",evidence:data.observations.answers.length?"原始回答、引用和 GEO 分析可追溯":"尚无可下钻回答",requiredForLaunch:true},
+    {key:"periodic_monitoring",label:"周期监测与失败留痕",status:data.periodicMonitoring?"ready":"pending",evidence:data.periodicMonitoring?"周期计划、成功与失败证据已保留":"尚未建立周期计划",requiredForLaunch:true},
+    {key:"web_console",label:"文旅业务验收网页",status:"ready" as const,evidence:"当前页面使用真实验收数据",requiredForLaunch:true},
+    {key:"linux_ci",label:"GitHub Linux CI",status:"ready" as const,evidence:"提交 89a6aea 的 Linux CI 34944606535 已成功",requiredForLaunch:true},
+    {key:"aliyun_native",label:"阿里云原生运行验证",status:"blocked" as const,evidence:"blocked-by-host-policy：宝塔主机策略阻断，未冒充通过",requiredForLaunch:true},
+    {key:"https_domain",label:"域名与 HTTPS 预发布",status:"pending" as const,evidence:"尚未完成本版本的公网 HTTPS 验收",requiredForLaunch:true},
+    {key:"cloud_backup",label:"云端备份与恢复",status:"pending" as const,evidence:"本地恢复已通过，云端尚未验收",requiredForLaunch:true},
+    {key:"cloud_logs_alerts",label:"云端日志与最小告警",status:"pending" as const,evidence:"尚未完成云端告警验收",requiredForLaunch:true},
+    {key:"multi_model",label:"多模型并行监控",status:"not_in_alpha" as const,evidence:"本次仅 DeepSeek API",requiredForLaunch:false},
+    {key:"multi_account_publish",label:"多平台多账号发布",status:"not_in_alpha" as const,evidence:"Alpha 不自动对外发布",requiredForLaunch:false},
+    {key:"web_app_sampling",label:"AI Web/App 搜索终端",status:"not_in_alpha" as const,evidence:"API 采样不代表 Web/App 搜索表现",requiredForLaunch:false},
+  ];
+  const fallbackOpen=fallbackItems.filter(x=>x.requiredForLaunch&&(x.status==="pending"||x.status==="blocked"));
+  const alphaReadiness=data.alphaReadiness??{rulesVersion:"alpha-readiness.v1" as const,overallStatus:fallbackOpen.some(x=>x.status==="blocked")?"blocked" as const:fallbackOpen.length?"pending" as const:"ready" as const,summary:fallbackOpen.length?`距离公网 Alpha 上线还有 ${fallbackOpen.length} 个硬门槛未满足。`:"单品牌 DeepSeek API Alpha 上线硬门槛已满足。",readyCount:fallbackItems.filter(x=>x.status==="ready").length,pendingCount:fallbackItems.filter(x=>x.status==="pending").length,blockedCount:fallbackItems.filter(x=>x.status==="blocked").length,notInAlphaCount:fallbackItems.filter(x=>x.status==="not_in_alpha").length,items:fallbackItems};
   return (
     <>
       <aside className="test-banner" aria-label="数据环境">{data.environment === "real_brand_baseline" ? "真实品牌首次观察 · DeepSeek API" : data.environment === "real_brand_draft" ? "真实品牌问题草案 · 尚未进行答案采样" : "验收测试数据 · 不代表真实品牌运营结果"}</aside>
@@ -166,17 +184,17 @@ export default function App() {
               </section>
               <section className="panel">
                 <div className="panel-head">
-                  <div><p className="eyebrow">Alpha 上线就绪总览</p><h2>{data.alphaReadiness.summary}</h2></div>
-                  <StatusPill value={data.alphaReadiness.overallStatus === "ready" ? "可上线" : data.alphaReadiness.overallStatus === "blocked" ? "仍有阻塞" : "仍有待办"} tone={data.alphaReadiness.overallStatus === "ready" ? "good" : "warn"}/>
+                  <div><p className="eyebrow">Alpha 上线就绪总览</p><h2>{alphaReadiness.summary}</h2></div>
+                  <StatusPill value={alphaReadiness.overallStatus === "ready" ? "可上线" : alphaReadiness.overallStatus === "blocked" ? "仍有阻塞" : "仍有待办"} tone={alphaReadiness.overallStatus === "ready" ? "good" : "warn"}/>
                 </div>
                 <div className="stat-grid decision-stats">
-                  <article><span>已就绪</span><strong>{data.alphaReadiness.readyCount}</strong><small>有可追溯证据</small></article>
-                  <article><span>待完成</span><strong>{data.alphaReadiness.pendingCount}</strong><small>尚未执行或验收</small></article>
-                  <article><span>外部阻塞</span><strong>{data.alphaReadiness.blockedCount}</strong><small>不冒充通过</small></article>
-                  <article><span>不属本次 Alpha</span><strong>{data.alphaReadiness.notInAlphaCount}</strong><small>后续版本处理</small></article>
+                  <article><span>已就绪</span><strong>{alphaReadiness.readyCount}</strong><small>有可追溯证据</small></article>
+                  <article><span>待完成</span><strong>{alphaReadiness.pendingCount}</strong><small>尚未执行或验收</small></article>
+                  <article><span>外部阻塞</span><strong>{alphaReadiness.blockedCount}</strong><small>不冒充通过</small></article>
+                  <article><span>不属本次 Alpha</span><strong>{alphaReadiness.notInAlphaCount}</strong><small>后续版本处理</small></article>
                 </div>
                 <div className="fact-list">
-                  {data.alphaReadiness.items.map(item=><article key={item.key}><div><StatusPill value={item.status === "ready" ? "已就绪" : item.status === "pending" ? "待完成" : item.status === "blocked" ? "被阻塞" : "不属本次 Alpha"} tone={item.status === "ready" ? "good" : item.status === "not_in_alpha" ? "neutral" : "warn"}/>{item.requiredForLaunch?<StatusPill value="上线硬门槛"/>:null}</div><h3>{item.label}</h3><p>{item.evidence}</p></article>)}
+                  {alphaReadiness.items.map(item=><article key={item.key}><div><StatusPill value={item.status === "ready" ? "已就绪" : item.status === "pending" ? "待完成" : item.status === "blocked" ? "被阻塞" : "不属本次 Alpha"} tone={item.status === "ready" ? "good" : item.status === "not_in_alpha" ? "neutral" : "warn"}/>{item.requiredForLaunch?<StatusPill value="上线硬门槛"/>:null}</div><h3>{item.label}</h3><p>{item.evidence}</p></article>)}
                 </div>
               </section>
               <section className="panel">

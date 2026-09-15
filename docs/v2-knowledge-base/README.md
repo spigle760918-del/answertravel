@@ -45,7 +45,7 @@
 | `25-real-question-panel-intent-card.md` | 北京珈程真实游客问题组草拟 | Gate A-F 已通过并封版 |
 | `26-first-real-observation-baseline-intent-card.md` | 北京珈程首次真实观察基线与自动诊断 | Gate A-F 已通过并封版 |
 | `27-periodic-monitoring-intent-card.md` | 北京珈程周期化监测、失败补采与自动复诊 | Gate A-F 已通过并封版 |
-| `28-brand-claim-verification-intent-card.md` | AI 品牌描述逐条事实核验与污染预警 | Gate A 待确认 |
+| `28-brand-claim-verification-intent-card.md` | AI 品牌描述逐条事实核验与污染预警 | Gate E 待验收 |
 
 ## 事实分级
 

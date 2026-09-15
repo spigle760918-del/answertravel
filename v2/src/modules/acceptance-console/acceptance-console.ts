@@ -218,6 +218,7 @@ export class AcceptanceConsoleRepository {
       const claimRuns=await client.query(`select count(*)::int count from brand_claim_verification_runs where rules_version='brand-claim-verification.v2'`);
       const claimFindings=await client.query(`select f.*,t.question_text,t.round from brand_claim_findings f join brand_claim_verification_runs v on v.tenant_id=f.tenant_id and v.id=f.run_id and v.rules_version='brand-claim-verification.v2' join raw_answers r on r.tenant_id=f.tenant_id and r.id=f.answer_id join observation_targets t on t.tenant_id=r.tenant_id and t.id=r.target_id order by case f.severity when 'critical' then 1 when 'warning' then 2 else 3 end,f.created_at,f.id`);
       const gapRouting=await client.query(`select * from evidence_gap_routing_snapshots order by created_at desc,id desc limit 1`);const gapRoutingRow=gapRouting.rows[0];
+      const actionPlan=await client.query(`select * from optimization_action_plan_snapshots order by created_at desc,id desc limit 1`);const actionPlanRow=actionPlan.rows[0];
       const onboarding = await client.query(`select package,status from real_brand_onboarding_packages order by created_at desc,id desc limit 1`);
       const onboardingRow = onboarding.rows[0];
       const failures = await client.query(
@@ -405,6 +406,7 @@ export class AcceptanceConsoleRepository {
           note:"仅核验品牌直问回答中的可识别主张；规则预警不是服务质量评价或法律结论。",
         },
         evidenceGapRouting:gapRoutingRow?{rulesVersion:gapRoutingRow.rules_version,sourceFindingCount:gapRoutingRow.source_finding_count,clusterCount:gapRoutingRow.cluster_count,createdAt:gapRoutingRow.created_at.toISOString(),clusters:gapRoutingRow.clusters}:null,
+        optimizationActionPlan:actionPlanRow?{rulesVersion:actionPlanRow.rules_version,sourceFindingCount:actionPlanRow.source_finding_count,sourceClusterCount:actionPlanRow.source_cluster_count,packageCount:actionPlanRow.package_count,createdAt:actionPlanRow.created_at.toISOString(),packages:actionPlanRow.packages,executionOrder:actionPlanRow.execution_order}:null,
         realBrandOnboarding: onboardingRow ? {
           brandName: onboardingRow.package.brandName,
           status: onboardingRow.status,
@@ -424,6 +426,7 @@ export class AcceptanceConsoleRepository {
           "引用候选与页面快照不等于内容被模型吸收或产生因果影响",
           "差距诊断当前先执行确定性证据门禁；网站诊断尚未接入时会明确显示缺失，不由 AI 猜测",
           "第二观察周期只扩充获批的中性样本；竞对直问仍需独立 Yes/No",
+          "行动计划是 F4 建议；等待事实或 Yes/No 的项目尚未执行，不代表官网、合同或产品已经改变",
         ],
       };
     });

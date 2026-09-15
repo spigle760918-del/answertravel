@@ -52,6 +52,8 @@ import { BrandClaimVerificationRepository } from "../src/modules/brand-claim-ver
 import { BrandClaimVerificationService } from "../src/modules/brand-claim-verification/brand-claim-verification-service.js";
 import { EvidenceGapRoutingRepository } from "../src/modules/evidence-gap-routing/evidence-gap-routing-repository.js";
 import { EvidenceGapRoutingService } from "../src/modules/evidence-gap-routing/evidence-gap-routing-service.js";
+import { OptimizationActionPlanRepository } from "../src/modules/optimization-action-plan/optimization-action-plan-repository.js";
+import { OptimizationActionPlanService } from "../src/modules/optimization-action-plan/optimization-action-plan-service.js";
 import {
   createObservationQueue,
   createObservationWorker,
@@ -830,6 +832,8 @@ try {
           if(claimResult.answers===0||claimResult.created!==claimResult.answers||repeated.idempotent!==claimResult.answers) throw new Error("Brand claim verification did not cover brand-direct answers idempotently.");
           const routingService=new EvidenceGapRoutingService(new EvidenceGapRoutingRepository(realPool));const routed=await routingService.evaluate(realTenantId);const routedAgain=await routingService.evaluate(realTenantId);
           if(routed.snapshot.sourceFindingCount===0||routed.snapshot.clusterCount===0||routedAgain.idempotent!==true) throw new Error("Evidence gap routing did not persist an idempotent snapshot.");
+          const actionPlanService=new OptimizationActionPlanService(new OptimizationActionPlanRepository(realPool));const actionPlan=await actionPlanService.create(realTenantId);const actionPlanAgain=await actionPlanService.create(realTenantId);
+          if(actionPlan.plan.packageCount===0||actionPlan.plan.packageCount>5||actionPlan.plan.sourceFindingCount!==routed.snapshot.sourceFindingCount||actionPlanAgain.idempotent!==true) throw new Error("Optimization action plan did not compress all gaps idempotently.");
         } finally { await consumer.close(); await citations.close(); await geoIntelligence.close(); await geoDecisions.close(); await producer.close(); }
         let counts = { answers:"0", scans:"0", geo:"0" };
         for (let poll=0; poll<240; poll++) {

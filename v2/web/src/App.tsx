@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { Overview } from "./types";
 import { StatusPill } from "./components/StatusPill";
 import { AnswerDrawer } from "./components/AnswerDrawer";
-type Tab = "overview" | "onboarding" | "truth" | "questions" | "geo" | "claims" | "cycles" | "decision" | "runs";
+type Tab = "overview" | "onboarding" | "truth" | "questions" | "geo" | "claims" | "actions" | "cycles" | "decision" | "runs";
 const tabs: Array<[Tab, string]> = [
   ["overview", "项目概览"],
   ["onboarding", "真实品牌接入"],
@@ -10,6 +10,7 @@ const tabs: Array<[Tab, string]> = [
   ["questions", "游客问题"],
   ["geo", "GEO 情报"],
   ["claims", "品牌描述核验"],
+  ["actions", "优化行动"],
   ["cycles", "可比较周期"],
   ["decision", "决策建议"],
   ["runs", "采集与回答"],
@@ -42,6 +43,7 @@ const deepDiveLabels: Record<string, string> = {
 };
 const verdictLabels:Record<string,string>={fact_consistent:"事实一致",fact_conflict:"事实冲突",self_reported_only:"仅品牌自述",insufficient_evidence:"证据不足",not_applicable:"不适用"};
 const routeLabels:Record<string,string>={brand_truth:"补充品牌事实",website_structure:"修复官网证据结构",external_source:"建设可核验外部信源",product_service:"先完善真实产品服务",content_brief_candidate:"进入内容任务书候选",observe_only:"暂不行动",manual_review:"待人工复核"};
+const actionStatusLabels:Record<string,string>={waiting_facts:"等待真实资料",ai_can_prepare:"AI可以先准备",waiting_yes_no:"等待 Yes/No",no_action:"暂不行动"};
 export default function App() {
   const [data, setData] = useState<Overview | null>(null);
   const [error, setError] = useState(false);
@@ -450,6 +452,13 @@ export default function App() {
             <section className="stat-grid decision-stats"><article><span>已核验品牌回答</span><strong>{data.brandClaimVerification.analyzedAnswers}</strong><small>仅品牌直问</small></article><article><span>可追溯主张</span><strong>{data.brandClaimVerification.totalFindings}</strong><small>逐条关联原回答</small></article>{data.brandClaimVerification.counts.slice(0,2).map(item=><article key={item.verdict}><span>{verdictLabels[item.verdict]??item.verdict}</span><strong>{item.count}</strong><small>规则型事实核验</small></article>)}</section>
             <section className="panel"><div className="panel-head"><div><p className="eyebrow">逐条证据</p><h2>品牌描述核验结果</h2></div></div>{data.brandClaimVerification.findings.length?<div className="answer-list">{data.brandClaimVerification.findings.map(item=><article className="run" key={item.id}><div><StatusPill value={verdictLabels[item.verdict]??item.verdict} tone={item.severity==="critical"?"bad":item.severity==="warning"?"warn":"good"}/><strong>{item.question} · 第 {item.round} 轮</strong><p>{item.claimText}</p><small>{item.reason}</small>{item.matchedRule?<small>命中规则：{item.matchedRule}</small>:null}</div></article>)}</div>:<p className="empty">当前品牌直问回答中没有发现可核验主张。</p>}</section>
             {data.evidenceGapRouting?<><section className="panel"><div className="panel-head"><div><p className="eyebrow">证据缺口动作路由</p><h2>先补什么，为什么不是直接写文章</h2></div><StatusPill value={data.evidenceGapRouting.rulesVersion} tone="good"/></div><p>{data.evidenceGapRouting.sourceFindingCount} 条缺口被归为 {data.evidenceGapRouting.clusterCount} 个游客决策主题，重复表达不会被当成新的独立证据。</p></section><section className="decision-grid">{data.evidenceGapRouting.clusters.map(cluster=><article className="panel" key={cluster.id}><div><StatusPill value={`优先级 ${cluster.priorityScore}`} tone={cluster.priorityScore>=80?"warn":"neutral"}/><StatusPill value={routeLabels[cluster.recommendedRoute]??cluster.recommendedRoute} tone={cluster.contentBriefEligible?"good":"neutral"}/></div><h2>{cluster.title}</h2><p>{cluster.rationale}</p><dl><div><dt>出现/去重</dt><dd>{cluster.occurrenceCount} / {cluster.uniqueClaimCount}</dd></div><div><dt>覆盖周期</dt><dd>{cluster.cycleCount}</dd></div><div><dt>预计窗口</dt><dd>{cluster.expectedWindow}</dd></div></dl>{cluster.minimalHumanQuestion?<><h3>需要人补充的最少信息</h3><p>{cluster.minimalHumanQuestion}</p></>:null}<h3>不行动选项</h3><p>{cluster.noActionOption}</p></article>)}</section></>:null}
+          </>}
+          {tab === "actions" && <>
+            {data.optimizationActionPlan?<>
+              <section className="panel"><div className="panel-head"><div><p className="eyebrow">优化行动计划</p><h1>AI先准备，人只补真相和做关键确认</h1></div><StatusPill value={data.optimizationActionPlan.rulesVersion} tone="good"/></div><p>{data.optimizationActionPlan.sourceFindingCount} 条证据缺口已从 {data.optimizationActionPlan.sourceClusterCount} 个主题压缩为 {data.optimizationActionPlan.packageCount} 个行动包。它们是 F4 建议，尚未修改官网、合同或产品。</p></section>
+              <section className="stat-grid decision-stats"><article><span>原始缺口</span><strong>{data.optimizationActionPlan.sourceFindingCount}</strong><small>完整保留追溯</small></article><article><span>行动包</span><strong>{data.optimizationActionPlan.packageCount}</strong><small>最多 5 个</small></article><article><span>AI可先准备</span><strong>{data.optimizationActionPlan.packages.filter(x=>x.status==="ai_can_prepare").length}</strong><small>不产生发布动作</small></article><article><span>等待真实资料</span><strong>{data.optimizationActionPlan.packages.filter(x=>x.status==="waiting_facts").length}</strong><small>系统不会猜测</small></article></section>
+              <section className="decision-grid">{[...data.optimizationActionPlan.packages].sort((a,b)=>a.priority-b.priority).map(item=><article className="panel" key={item.id}><div><StatusPill value={`第 ${item.priority} 步`} tone={item.priority<=2?"warn":"neutral"}/><StatusPill value={actionStatusLabels[item.status]??item.status} tone={item.status==="ai_can_prepare"?"good":item.status==="waiting_facts"?"warn":"neutral"}/></div><h2>{item.title}</h2><p>{item.businessGoal}</p><dl><div><dt>关联证据缺口</dt><dd>{item.sourceFindingIds.length}</dd></div><div><dt>预计窗口</dt><dd>{item.expectedWindow}</dd></div></dl><h3>AI现在会做什么</h3><ul>{item.aiPreparation.map(x=><li key={x}>{x}</li>)}</ul>{item.humanInputs.length?<><h3>需要你补充什么</h3><ul>{item.humanInputs.map(x=><li key={x}>{x}</li>)}</ul></>:<><h3>需要你补充什么</h3><p>当前不需要补资料。</p></>}<h3>补充或确认后</h3><p>{item.afterHumanInput}</p>{item.approvalQuestion?<><h3>后续 Yes/No</h3><p>{item.approvalQuestion}</p></>:null}<h3>验收标准</h3><ul>{item.acceptanceCriteria.map(x=><li key={x}>{x}</li>)}</ul><h3>不行动选项</h3><p>{item.noActionOption}</p></article>)}</section>
+            </>:<section className="panel"><h1>优化行动计划尚未生成</h1><p className="empty">等待证据缺口路由完成，系统不会用模拟建议填充。</p></section>}
           </>}
           {tab === "cycles" && (
             <>

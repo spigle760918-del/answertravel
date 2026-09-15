@@ -54,7 +54,7 @@
 | `34-configurable-action-fact-intake-intent-card.md` | 品牌个性化行动事实采集框架 | Gate A-F 已通过并封版 |
 | `35-personalized-fact-workbench-intent-card.md` | 品牌个性化事实补充工作台 | Gate A-F 已通过并封版 |
 | `36-alpha-readiness-overview-intent-card.md` | 单品牌 DeepSeek Alpha 上线就绪总览 | Gate A-F 已通过并封版 |
-| `37-isolated-cloud-predeploy-intent-card.md` | 阿里云隔离预发布准备 | Gate A 已确认，进入实现 |
+| `37-isolated-cloud-predeploy-intent-card.md` | 阿里云隔离预发布准备 | Gate A-F 已通过并封版 |
 
 ## 事实分级
 

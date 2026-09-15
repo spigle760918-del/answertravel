@@ -47,7 +47,8 @@
 | `27-periodic-monitoring-intent-card.md` | 北京珈程周期化监测、失败补采与自动复诊 | Gate A-F 已通过并封版 |
 | `28-brand-claim-verification-intent-card.md` | AI 品牌描述逐条事实核验与污染预警 | Gate A-F 已通过并封版 |
 | `29-evidence-gap-action-routing-intent-card.md` | 证据缺口聚类、优先级与优化动作路由 | Gate A-F 已通过并封版 |
-| `30-optimization-action-plan-intent-card.md` | 优化行动计划、依赖与最小审批 | Gate A-D 已完成，Gate E 待验收 |
+| `30-optimization-action-plan-intent-card.md` | 优化行动计划、依赖与最小审批 | Gate A-F 已通过并封版 |
+| `31-trust-evidence-blueprint-intent-card.md` | 资质可信证据清单与官网事实区蓝图 | Gate A-D 已完成，Gate E 待验收 |
 
 ## 事实分级
 

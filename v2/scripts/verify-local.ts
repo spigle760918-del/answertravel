@@ -54,6 +54,8 @@ import { EvidenceGapRoutingRepository } from "../src/modules/evidence-gap-routin
 import { EvidenceGapRoutingService } from "../src/modules/evidence-gap-routing/evidence-gap-routing-service.js";
 import { OptimizationActionPlanRepository } from "../src/modules/optimization-action-plan/optimization-action-plan-repository.js";
 import { OptimizationActionPlanService } from "../src/modules/optimization-action-plan/optimization-action-plan-service.js";
+import { TrustEvidenceBlueprintRepository } from "../src/modules/trust-evidence-blueprint/trust-evidence-blueprint-repository.js";
+import { TrustEvidenceBlueprintService } from "../src/modules/trust-evidence-blueprint/trust-evidence-blueprint-service.js";
 import {
   createObservationQueue,
   createObservationWorker,
@@ -834,6 +836,8 @@ try {
           if(routed.snapshot.sourceFindingCount===0||routed.snapshot.clusterCount===0||routedAgain.idempotent!==true) throw new Error("Evidence gap routing did not persist an idempotent snapshot.");
           const actionPlanService=new OptimizationActionPlanService(new OptimizationActionPlanRepository(realPool));const actionPlan=await actionPlanService.create(realTenantId);const actionPlanAgain=await actionPlanService.create(realTenantId);
           if(actionPlan.plan.packageCount===0||actionPlan.plan.packageCount>5||actionPlan.plan.sourceFindingCount!==routed.snapshot.sourceFindingCount||actionPlanAgain.idempotent!==true) throw new Error("Optimization action plan did not compress all gaps idempotently.");
+          const trustService=new TrustEvidenceBlueprintService(new TrustEvidenceBlueprintRepository(realPool));const trust=await trustService.create(realTenantId);const trustAgain=await trustService.create(realTenantId);
+          if(trust.blueprint.evidenceItemCount!==9||trust.blueprint.pageSections.length!==4||trust.blueprint.publicationAuthorized||trustAgain.idempotent!==true) throw new Error("Trust evidence blueprint did not preserve evidence and publication boundaries.");
         } finally { await consumer.close(); await citations.close(); await geoIntelligence.close(); await geoDecisions.close(); await producer.close(); }
         let counts = { answers:"0", scans:"0", geo:"0" };
         for (let poll=0; poll<240; poll++) {

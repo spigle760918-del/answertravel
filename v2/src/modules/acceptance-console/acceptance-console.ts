@@ -219,6 +219,7 @@ export class AcceptanceConsoleRepository {
       const claimFindings=await client.query(`select f.*,t.question_text,t.round from brand_claim_findings f join brand_claim_verification_runs v on v.tenant_id=f.tenant_id and v.id=f.run_id and v.rules_version='brand-claim-verification.v2' join raw_answers r on r.tenant_id=f.tenant_id and r.id=f.answer_id join observation_targets t on t.tenant_id=r.tenant_id and t.id=r.target_id order by case f.severity when 'critical' then 1 when 'warning' then 2 else 3 end,f.created_at,f.id`);
       const gapRouting=await client.query(`select * from evidence_gap_routing_snapshots order by created_at desc,id desc limit 1`);const gapRoutingRow=gapRouting.rows[0];
       const actionPlan=await client.query(`select * from optimization_action_plan_snapshots order by created_at desc,id desc limit 1`);const actionPlanRow=actionPlan.rows[0];
+      const trustBlueprint=await client.query(`select * from trust_evidence_blueprints order by created_at desc,id desc limit 1`);const trustBlueprintRow=trustBlueprint.rows[0];
       const onboarding = await client.query(`select package,status from real_brand_onboarding_packages order by created_at desc,id desc limit 1`);
       const onboardingRow = onboarding.rows[0];
       const failures = await client.query(
@@ -407,6 +408,7 @@ export class AcceptanceConsoleRepository {
         },
         evidenceGapRouting:gapRoutingRow?{rulesVersion:gapRoutingRow.rules_version,sourceFindingCount:gapRoutingRow.source_finding_count,clusterCount:gapRoutingRow.cluster_count,createdAt:gapRoutingRow.created_at.toISOString(),clusters:gapRoutingRow.clusters}:null,
         optimizationActionPlan:actionPlanRow?{rulesVersion:actionPlanRow.rules_version,sourceFindingCount:actionPlanRow.source_finding_count,sourceClusterCount:actionPlanRow.source_cluster_count,packageCount:actionPlanRow.package_count,createdAt:actionPlanRow.created_at.toISOString(),packages:actionPlanRow.packages,executionOrder:actionPlanRow.execution_order}:null,
+        trustEvidenceBlueprint:trustBlueprintRow?{rulesVersion:trustBlueprintRow.rules_version,status:trustBlueprintRow.status,factLevel:trustBlueprintRow.fact_level,evidenceItemCount:trustBlueprintRow.evidence_item_count,evidenceItems:trustBlueprintRow.evidence_items,pageSections:trustBlueprintRow.page_sections,machineReadableDraft:trustBlueprintRow.machine_readable_draft,prohibitedClaims:trustBlueprintRow.prohibited_claims,nextEvidenceTasks:trustBlueprintRow.next_evidence_tasks,publicationAuthorized:trustBlueprintRow.publication_authorized,createdAt:trustBlueprintRow.created_at.toISOString()}:null,
         realBrandOnboarding: onboardingRow ? {
           brandName: onboardingRow.package.brandName,
           status: onboardingRow.status,

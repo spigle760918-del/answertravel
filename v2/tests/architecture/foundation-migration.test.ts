@@ -109,4 +109,11 @@ describe("foundation migration guardrails", () => {
     expect(sql).toContain("force row level security");
     expect(sql).toContain("trust_source_verification_snapshots_tenant_isolation");
   });
+  it("keeps refund policy intake immutable and blocks premature summaries or publication", async () => {
+    const sql = await readFile(resolve(process.cwd(), "migrations/0020_refund_policy_intake.sql"), "utf8");
+    expect(sql).toContain("refund_policy_intake_snapshots_append_only");
+    expect(sql).toContain("summary_draft_authorized=false");
+    expect(sql).toContain("publication_authorized=false");
+    expect(sql).toContain("force row level security");
+  });
 });

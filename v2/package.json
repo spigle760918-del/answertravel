@@ -21,6 +21,7 @@
     "db:provision-test": "tsx scripts/provision-test-database.ts",
     "db:migrate": "tsx scripts/migrate.ts",
     "claims:verify": "tsx scripts/verify-brand-claims.ts",
+    "gaps:route": "tsx scripts/route-evidence-gaps.ts",
     "dev:api": "tsx watch src/main.ts",
     "dev:worker": "tsx watch src/worker.ts",
     "start:api": "tsx src/main.ts",

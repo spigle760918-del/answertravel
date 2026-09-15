@@ -50,6 +50,8 @@ import { createDailyMonitoringSchedule, planScheduledCycle } from "../src/module
 import { PeriodicMonitoringRepository } from "../src/modules/periodic-monitoring/periodic-monitoring-repository.js";
 import { BrandClaimVerificationRepository } from "../src/modules/brand-claim-verification/brand-claim-verification-repository.js";
 import { BrandClaimVerificationService } from "../src/modules/brand-claim-verification/brand-claim-verification-service.js";
+import { EvidenceGapRoutingRepository } from "../src/modules/evidence-gap-routing/evidence-gap-routing-repository.js";
+import { EvidenceGapRoutingService } from "../src/modules/evidence-gap-routing/evidence-gap-routing-service.js";
 import {
   createObservationQueue,
   createObservationWorker,
@@ -826,6 +828,8 @@ try {
           const claimResult=await claimVerification.verifyTenant(realTenantId);
           const repeated=await claimVerification.verifyTenant(realTenantId);
           if(claimResult.answers===0||claimResult.created!==claimResult.answers||repeated.idempotent!==claimResult.answers) throw new Error("Brand claim verification did not cover brand-direct answers idempotently.");
+          const routingService=new EvidenceGapRoutingService(new EvidenceGapRoutingRepository(realPool));const routed=await routingService.evaluate(realTenantId);const routedAgain=await routingService.evaluate(realTenantId);
+          if(routed.snapshot.sourceFindingCount===0||routed.snapshot.clusterCount===0||routedAgain.idempotent!==true) throw new Error("Evidence gap routing did not persist an idempotent snapshot.");
         } finally { await consumer.close(); await citations.close(); await geoIntelligence.close(); await geoDecisions.close(); await producer.close(); }
         let counts = { answers:"0", scans:"0", geo:"0" };
         for (let poll=0; poll<240; poll++) {

@@ -1,0 +1,2 @@
+import {routeEvidenceGaps} from "./evidence-gap-routing.js";import {EvidenceGapRoutingRepository} from "./evidence-gap-routing-repository.js";
+export class EvidenceGapRoutingService{constructor(private readonly repository:EvidenceGapRoutingRepository){}async evaluate(tenantId:string){const inputs=await this.repository.inputs(tenantId);const draft=routeEvidenceGaps(tenantId,inputs);const existing=await this.repository.byHash(tenantId,draft.inputSha256);if(existing)return{snapshot:existing,idempotent:true};return{snapshot:await this.repository.save(draft),idempotent:false};}}

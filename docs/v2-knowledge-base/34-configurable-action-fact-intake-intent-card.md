@@ -65,7 +65,7 @@
 - 回答状态：现在提供、不适用、稍后增补，共3种；未填写不会被 AI 自动补全。
 - 北京珈程真实实例：从“官网价格与行程事实区”行动包的21条来源缺口生成3个关注主题。
 - 真实数据库：首次写入 `idempotent=false`，复跑 `idempotent=true`；`factDraftAuthorized=false`、`publicationAuthorized=false`。
-- 自动验证：Node.js 24 下33个测试文件、140/140测试通过；PostgreSQL冷备恢复、Redis AOF恢复和Web生产构建通过。
+- 自动验证：Node.js 24 下33个测试文件、140/140测试通过；PostgreSQL冷备恢复、Redis AOF恢复和Web生产构建通过。实现提交 `92d616ab89a1b3769ea7aa6c3640ed7a4eefe66a` 的 GitHub Linux CI `34935691374` 成功。
 - 可视化验收：`http://127.0.0.1:4281/` 已接入真实验收数据库。独立自动浏览器通道连续连接失败，未将自动视觉检查标为通过。
 - 未调用 DeepSeek，未收集真实价格/行程，未修改官网，未发布。
 - 阿里云原生验证继续标记为 `blocked-by-host-policy`。

@@ -2,13 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import type { Overview } from "./types";
 import { StatusPill } from "./components/StatusPill";
 import { AnswerDrawer } from "./components/AnswerDrawer";
-type Tab = "overview" | "onboarding" | "truth" | "questions" | "geo" | "cycles" | "decision" | "runs";
+type Tab = "overview" | "onboarding" | "truth" | "questions" | "geo" | "claims" | "cycles" | "decision" | "runs";
 const tabs: Array<[Tab, string]> = [
   ["overview", "项目概览"],
   ["onboarding", "真实品牌接入"],
   ["truth", "品牌真相"],
   ["questions", "游客问题"],
   ["geo", "GEO 情报"],
+  ["claims", "品牌描述核验"],
   ["cycles", "可比较周期"],
   ["decision", "决策建议"],
   ["runs", "采集与回答"],
@@ -39,6 +40,7 @@ const deepDiveLabels: Record<string, string> = {
   expand_sample: "先扩充中性样本",
   recommend_approval: "建议深挖，等待确认",
 };
+const verdictLabels:Record<string,string>={fact_consistent:"事实一致",fact_conflict:"事实冲突",self_reported_only:"仅品牌自述",insufficient_evidence:"证据不足",not_applicable:"不适用"};
 export default function App() {
   const [data, setData] = useState<Overview | null>(null);
   const [error, setError] = useState(false);
@@ -442,6 +444,11 @@ export default function App() {
               <section className="panel"><h1>决策尚未生成</h1><p className="empty">等待基础 GEO 情报完成后自动评估，不使用模拟建议填充。</p></section>
             )
           )}
+          {tab === "claims" && <>
+            <section className="panel"><div className="panel-head"><div><p className="eyebrow">AI 品牌描述逐条核验</p><h1>AI 说了什么，哪些可信，哪些需要警惕</h1></div><StatusPill value={data.brandClaimVerification.rulesVersion} tone="good" /></div><p>{data.brandClaimVerification.note}</p></section>
+            <section className="stat-grid decision-stats"><article><span>已核验品牌回答</span><strong>{data.brandClaimVerification.analyzedAnswers}</strong><small>仅品牌直问</small></article><article><span>可追溯主张</span><strong>{data.brandClaimVerification.totalFindings}</strong><small>逐条关联原回答</small></article>{data.brandClaimVerification.counts.slice(0,2).map(item=><article key={item.verdict}><span>{verdictLabels[item.verdict]??item.verdict}</span><strong>{item.count}</strong><small>规则型事实核验</small></article>)}</section>
+            <section className="panel"><div className="panel-head"><div><p className="eyebrow">逐条证据</p><h2>品牌描述核验结果</h2></div></div>{data.brandClaimVerification.findings.length?<div className="answer-list">{data.brandClaimVerification.findings.map(item=><article className="run" key={item.id}><div><StatusPill value={verdictLabels[item.verdict]??item.verdict} tone={item.severity==="critical"?"bad":item.severity==="warning"?"warn":"good"}/><strong>{item.question} · 第 {item.round} 轮</strong><p>{item.claimText}</p><small>{item.reason}</small>{item.matchedRule?<small>命中规则：{item.matchedRule}</small>:null}</div></article>)}</div>:<p className="empty">当前品牌直问回答中没有发现可核验主张。</p>}</section>
+          </>}
           {tab === "cycles" && (
             <>
               {data.periodicMonitoring ? <>

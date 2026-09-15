@@ -119,6 +119,14 @@ export type AcceptanceOverview = {
     decisionReference: string;
     cycles: Array<{ cycleKey: string; scheduledFor: string; observationPlanId: string; status: "planned" }>;
   };
+  brandClaimVerification: {
+    rulesVersion: "brand-claim-verification.v1";
+    analyzedAnswers: number;
+    totalFindings: number;
+    counts: Array<{ verdict: string; count: number }>;
+    findings: Array<{ id:string;answerId:string;question:string;round:number;claimText:string;evidenceExcerpt:string;verdict:string;severity:string;matchedRule:string|null;brandFactId:string|null;reason:string;createdAt:string }>;
+    note: string;
+  };
   realBrandOnboarding: null | {
     brandName: string;
     status: "draft";
@@ -206,6 +214,8 @@ export class AcceptanceConsoleRepository {
       const periodic = await client.query(`select * from monitoring_schedules order by created_at desc limit 1`);
       const periodicRow = periodic.rows[0];
       const periodicCycles = periodicRow ? await client.query(`select * from monitoring_cycles where schedule_id=$1 order by scheduled_for desc`,[periodicRow.id]) : {rows:[]};
+      const claimRuns=await client.query(`select count(*)::int count from brand_claim_verification_runs where rules_version='brand-claim-verification.v1'`);
+      const claimFindings=await client.query(`select f.*,t.question_text,t.round from brand_claim_findings f join raw_answers r on r.tenant_id=f.tenant_id and r.id=f.answer_id join observation_targets t on t.tenant_id=r.tenant_id and t.id=r.target_id order by case f.severity when 'critical' then 1 when 'warning' then 2 else 3 end,f.created_at,f.id`);
       const onboarding = await client.query(`select package,status from real_brand_onboarding_packages order by created_at desc,id desc limit 1`);
       const onboardingRow = onboarding.rows[0];
       const failures = await client.query(
@@ -386,6 +396,12 @@ export class AcceptanceConsoleRepository {
           maxSamplesPerCycle:periodicRow.max_samples_per_cycle,maxTokensPerCycle:periodicRow.rules.maxTotalTokens,decisionReference:periodicRow.decision_reference,
           cycles:periodicCycles.rows.map((item)=>({cycleKey:item.cycle_key,scheduledFor:item.scheduled_for.toISOString(),observationPlanId:item.observation_plan_id,status:item.status})),
         } : null,
+        brandClaimVerification: {
+          rulesVersion:"brand-claim-verification.v1",analyzedAnswers:claimRuns.rows[0]?.count??0,totalFindings:claimFindings.rows.length,
+          counts:Object.entries(claimFindings.rows.reduce((acc:Record<string,number>,x:any)=>{acc[x.verdict]=(acc[x.verdict]??0)+1;return acc;},{})).map(([verdict,count])=>({verdict,count})),
+          findings:claimFindings.rows.map(x=>({id:x.id,answerId:x.answer_id,question:x.question_text,round:x.round,claimText:x.claim_text,evidenceExcerpt:x.evidence_excerpt,verdict:x.verdict,severity:x.severity,matchedRule:x.matched_rule,brandFactId:x.brand_fact_id,reason:x.reason,createdAt:x.created_at.toISOString()})),
+          note:"仅核验品牌直问回答中的可识别主张；规则预警不是服务质量评价或法律结论。",
+        },
         realBrandOnboarding: onboardingRow ? {
           brandName: onboardingRow.package.brandName,
           status: onboardingRow.status,

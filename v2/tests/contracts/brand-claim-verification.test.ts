@@ -1,0 +1,7 @@
+import {randomUUID} from "node:crypto";import {describe,expect,it} from "vitest";import {verifyBrandClaims} from "../../src/modules/brand-claim-verification/brand-claim-verification.js";
+const base={tenantId:randomUUID(),answerId:randomUUID(),brandName:"北京珈程国际旅行社",brandTruthCardId:randomUUID(),brandTruthVersion:2,facts:[{id:randomUUID(),statement:"工商登记成立日期为2024年12月06日"},{id:randomUUID(),statement:"持有旅行社业务经营许可证L-BJ10127"}],createdAt:new Date().toISOString()};
+describe("brand claim verification",()=>{
+ it("detects known pollution without turning it into a legal conclusion",()=>{const x=verifyBrandClaims({...base,answerText:"北京珈程国际旅行社是5A级旅行社，拥有256人持证导游团队。"});expect(x.findings.map(f=>f.verdict)).toContain("fact_conflict");expect(x.findings.some(f=>f.reason.includes("不是法律结论"))).toBe(true);});
+ it("links consistent facts and downgrades unsupported claims",()=>{const x=verifyBrandClaims({...base,answerText:"北京珈程国际旅行社成立于2024年12月，许可证号为L-BJ10127。该旅行社服务体验非常好。"});expect(x.findings.filter(f=>f.verdict==="fact_consistent")).toHaveLength(1);expect(x.findings.some(f=>f.brandFactId)).toBe(true);expect(x.findings.some(f=>f.verdict==="insufficient_evidence")).toBe(true);});
+ it("marks website-only marketing numbers as self reported",()=>{const x=verifyBrandClaims({...base,answerText:"北京珈程国际旅行社官网显示满意度100，京小团销量399。"});expect(x.findings[0]).toMatchObject({verdict:"self_reported_only",severity:"warning"});});
+});

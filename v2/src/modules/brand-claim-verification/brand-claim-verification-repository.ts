@@ -1,0 +1,18 @@
+import type pg from "pg";
+import {createAuditEvent} from "../../kernel/audit-event.js";
+import {appendAuditEvent} from "../../platform/audit.js";
+import {withTenantTransaction} from "../../platform/database.js";
+import {claimFindingSchema,claimVerificationRunSchema,type ClaimFinding,type ClaimVerificationRun} from "./brand-claim-verification.js";
+
+export class BrandClaimVerificationRepository{
+  constructor(private readonly pool:pg.Pool){}
+  async inputs(tenantId:string):Promise<Array<{answerId:string;answerText:string;brandName:string;brandTruthCardId:string;brandTruthVersion:number;facts:Array<{id:string;statement:string}>}>>{return withTenantTransaction(this.pool,tenantId,async c=>{
+    const r=await c.query(`select r.id answer_id,r.answer_text,b.id brand_truth_card_id,b.version brand_truth_version,b.brand_name,b.facts from raw_answers r join observation_targets t on t.tenant_id=r.tenant_id and t.id=r.target_id join observation_plans p on p.tenant_id=t.tenant_id and p.id=t.plan_id join question_panels q on q.tenant_id=p.tenant_id and q.id=p.question_panel_id and q.version=p.question_panel_version join brand_truth_cards b on b.tenant_id=q.tenant_id and b.id=q.brand_truth_card_id and b.version=q.brand_truth_version left join lateral jsonb_array_elements(q.candidates) candidate(item) on candidate.item->>'id'=t.question_candidate_id::text where candidate.item->>'objectType'='brand_direct' order by r.captured_at,r.id`);
+    return r.rows.map(x=>({answerId:x.answer_id,answerText:x.answer_text,brandName:x.brand_name,brandTruthCardId:x.brand_truth_card_id,brandTruthVersion:x.brand_truth_version,facts:(x.facts as any[]).map(f=>({id:f.id,statement:f.statement}))}));});}
+  async byInputHash(tenantId:string,hash:string):Promise<ClaimVerificationRun|null>{return withTenantTransaction(this.pool,tenantId,async c=>{const r=await c.query("select * from brand_claim_verification_runs where input_sha256=$1",[hash]);const x=r.rows[0];return x?this.mapRun(x):null;});}
+  async save(runRaw:ClaimVerificationRun,findingsRaw:ClaimFinding[]):Promise<void>{const run=claimVerificationRunSchema.parse(runRaw),findings=findingsRaw.map(x=>claimFindingSchema.parse(x));await withTenantTransaction(this.pool,run.tenantId,async c=>{
+    await c.query("insert into brand_claim_verification_runs(id,tenant_id,answer_id,brand_truth_card_id,brand_truth_version,rules_version,input_sha256,status,finding_count,analyzed_at) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)",[run.id,run.tenantId,run.answerId,run.brandTruthCardId,run.brandTruthVersion,run.rulesVersion,run.inputSha256,run.status,run.findingCount,run.analyzedAt]);
+    for(const f of findings)await c.query("insert into brand_claim_findings(id,tenant_id,run_id,answer_id,claim_text,evidence_excerpt,verdict,severity,matched_rule,brand_fact_id,reason,created_at) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)",[f.id,f.tenantId,f.runId,f.answerId,f.claimText,f.evidenceExcerpt,f.verdict,f.severity,f.matchedRule,f.brandFactId,f.reason,f.createdAt]);
+    await appendAuditEvent(c,createAuditEvent({tenantId:run.tenantId,actorType:"worker",actorId:"brand-claim-verification.v1",traceId:run.answerId,action:"brand_claims.verified",resourceType:"brand_claim_verification_run",resourceId:run.id,detail:{findingCount:findings.length,conflicts:findings.filter(f=>f.verdict==="fact_conflict").length}}));});}
+  private mapRun(x:any){return claimVerificationRunSchema.parse({id:x.id,tenantId:x.tenant_id,answerId:x.answer_id,brandTruthCardId:x.brand_truth_card_id,brandTruthVersion:x.brand_truth_version,rulesVersion:x.rules_version,inputSha256:x.input_sha256,status:x.status,findingCount:x.finding_count,analyzedAt:x.analyzed_at.toISOString()});}
+}

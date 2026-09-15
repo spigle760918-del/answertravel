@@ -48,6 +48,8 @@ import { buildBenchmarkFactPack, buildBrandTruthDraftFromBenchmark } from "../sr
 import { RealBrandOnboardingRepository } from "../src/modules/real-brand-onboarding/real-brand-onboarding-repository.js";
 import { createDailyMonitoringSchedule, planScheduledCycle } from "../src/modules/periodic-monitoring/periodic-monitoring.js";
 import { PeriodicMonitoringRepository } from "../src/modules/periodic-monitoring/periodic-monitoring-repository.js";
+import { BrandClaimVerificationRepository } from "../src/modules/brand-claim-verification/brand-claim-verification-repository.js";
+import { BrandClaimVerificationService } from "../src/modules/brand-claim-verification/brand-claim-verification-service.js";
 import {
   createObservationQueue,
   createObservationWorker,
@@ -820,6 +822,10 @@ try {
             if(poll===359) throw new Error("Periodic answer evidence did not finish downstream analysis.");
             await delay(500);
           }
+          const claimVerification=new BrandClaimVerificationService(new BrandClaimVerificationRepository(realPool));
+          const claimResult=await claimVerification.verifyTenant(realTenantId);
+          const repeated=await claimVerification.verifyTenant(realTenantId);
+          if(claimResult.answers===0||claimResult.created!==claimResult.answers||repeated.idempotent!==claimResult.answers) throw new Error("Brand claim verification did not cover brand-direct answers idempotently.");
         } finally { await consumer.close(); await citations.close(); await geoIntelligence.close(); await geoDecisions.close(); await producer.close(); }
         let counts = { answers:"0", scans:"0", geo:"0" };
         for (let poll=0; poll<240; poll++) {
@@ -834,7 +840,8 @@ try {
         const periodicState=await new PeriodicMonitoringRepository(realPool).latestSchedule(realTenantId);
         const periodicCycles=await new PeriodicMonitoringRepository(realPool).cycles(realTenantId);
         if(!periodicState||periodicState.status!=="active"||periodicCycles.length!==1) throw new Error("Periodic monitoring schedule was not persisted idempotently.");
-        console.log(`PASS: Beijing Jiacheng baseline plus one periodic acceptance cycle completed; answers=${counts.answers}, citationScans=${counts.scans}, geoAnalyses=${counts.geo}. Failures remain visible if any.`);
+        const claimCounts=await withTenantTransaction(realPool,realTenantId,c=>c.query<{runs:string;findings:string;conflicts:string}>(`select (select count(*) from brand_claim_verification_runs)::text runs,(select count(*) from brand_claim_findings)::text findings,(select count(*) from brand_claim_findings where verdict='fact_conflict')::text conflicts`));
+        console.log(`PASS: Beijing Jiacheng baseline plus periodic cycle and brand-claim verification completed; answers=${counts.answers}, claimRuns=${claimCounts.rows[0]?.runs}, findings=${claimCounts.rows[0]?.findings}, conflicts=${claimCounts.rows[0]?.conflicts}.`);
       } finally { await realPool.end(); }
     }
   }

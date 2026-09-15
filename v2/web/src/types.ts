@@ -179,6 +179,7 @@ export type Overview = {
     createdAt: string;
   };
   periodicMonitoring: null | { status:"active"|"paused"; cadence:"daily"; timezone:"Asia/Shanghai"; nextRunAt:string; maxSamplesPerCycle:number; maxTokensPerCycle:number; decisionReference:string; cycles:Array<{cycleKey:string;scheduledFor:string;observationPlanId:string;status:"planned"}> };
+  brandClaimVerification: { rulesVersion:"brand-claim-verification.v1"; analyzedAnswers:number; totalFindings:number; counts:Array<{verdict:string;count:number}>; findings:Array<{id:string;answerId:string;question:string;round:number;claimText:string;evidenceExcerpt:string;verdict:string;severity:string;matchedRule:string|null;brandFactId:string|null;reason:string;createdAt:string}>; note:string };
   realBrandOnboarding: null | {
     brandName: string;
     status: "draft";

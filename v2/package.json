@@ -11,6 +11,8 @@
     "check:types": "tsc --noEmit",
     "check:types:web": "tsc -p web/tsconfig.json --noEmit",
     "build:web": "vite build --config web/vite.config.ts",
+    "build:server": "tsc -p tsconfig.production.json",
+    "build:alpha": "node scripts/check-runtime.mjs --strict && npm run build:web && npm run build:server",
     "check": "npm run check:runtime && npm run check:types && npm run check:types:web && npm run build:web && vitest run",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -30,7 +32,10 @@
     "dev:api": "tsx watch src/main.ts",
     "dev:worker": "tsx watch src/worker.ts",
     "start:api": "tsx src/main.ts",
-    "start:worker": "tsx src/worker.ts"
+    "start:worker": "tsx src/worker.ts",
+    "start:api:prod": "node dist/src/main.js",
+    "start:worker:prod": "node dist/src/worker.js",
+    "db:migrate:prod": "node dist/scripts/migrate.js"
   },
   "dependencies": {
     "@fastify/static": "10.1.3",

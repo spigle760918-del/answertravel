@@ -54,5 +54,6 @@ jobs:
           cache: npm
           cache-dependency-path: v2/package-lock.json
       - run: npm ci
+      - run: npm run build:alpha
       - run: npm run db:provision-test
       - run: npm run check:integration

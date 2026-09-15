@@ -83,6 +83,13 @@
 - swap 已满，因此任何后续原生安装或验证必须先取得资源风险确认，并使用明确的 CPU、内存和时长限制。
 - 服务器原生验证仍不能执行，原因是此前宝塔安全策略阻断非特权运行和子进程，不得绕过该策略。
 
+## 4 GiB swap 后的 Compose 方案
+
+- 用户已将 `/www/swap` 扩展至4 GiB并启用，当前使用量接近0，且已写入 `/etc/fstab` 持久化。
+- 在现有8 GiB内存上继续采用受限 Docker Compose：PostgreSQL 1536 MiB、Redis 384 MiB、API 512 MiB、Worker 512 MiB，并设置 CPU 上限。
+- Compose 仅将 API 映射到 `127.0.0.1:4288`；数据库和 Redis 不发布宿主机端口，网络设为内部网络。
+- 这只解除 swap 风险门槛，不代表容器已经启动、数据库已迁移、HTTPS已配置或公网已上线。
+
 ## Docker 状态修正（用户后续安装后只读核验）
 
 - Docker Engine 26.1.3、Compose v2.27.0 已可用；当前没有运行中的容器。

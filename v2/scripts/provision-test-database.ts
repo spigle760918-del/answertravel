@@ -21,7 +21,7 @@ export async function provisionTestDatabase(adminUrl: string, password: string):
     await pool.query(`grant select, insert, update, delete, truncate on brand_truth_quality_reports to ${pg.escapeIdentifier(role)}`);
     await pool.query(`grant select, insert, update, delete, truncate on question_generation_runs, question_panels to ${pg.escapeIdentifier(role)}`);
     await pool.query(`grant select, insert, update, delete, truncate on observation_plans, observation_targets, observation_attempts, raw_answers to ${pg.escapeIdentifier(role)}`);
-    await pool.query(`grant select, insert, update, delete, truncate on citation_scans, citation_events, source_snapshots to ${pg.escapeIdentifier(role)}`);
+    await pool.query(`grant select, insert, update, delete, truncate on citation_scans, citation_events, source_snapshots, trust_source_verification_snapshots to ${pg.escapeIdentifier(role)}`);
     await pool.query(`grant select, insert, update, delete, truncate on geo_entity_sets, geo_analysis_runs, geo_entity_mentions, geo_ranking_facts, geo_claim_facts to ${pg.escapeIdentifier(role)}`);
     await pool.query(`grant select, insert, update, delete, truncate on geo_diagnosis_snapshots, geo_action_proposals, competitor_deep_dive_recommendations to ${pg.escapeIdentifier(role)}`);
     await pool.query(`grant select, insert, update, delete, truncate on sampling_expansion_authorizations, comparable_observation_snapshots to ${pg.escapeIdentifier(role)}`);

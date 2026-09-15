@@ -128,6 +128,7 @@ export type AcceptanceOverview = {
     note: string;
   };
   evidenceGapRouting: null | { rulesVersion:"evidence-gap-routing.v1";sourceFindingCount:number;clusterCount:number;createdAt:string;clusters:Array<{id:string;theme:string;title:string;factLevel:"F3";priorityScore:number;occurrenceCount:number;uniqueClaimCount:number;cycleCount:number;recommendedRoute:string;rationale:string;noActionOption:string;minimalHumanQuestion:string|null;expectedWindow:string;risk:string;contentBriefEligible:boolean}> };
+  trustSourceVerification:null|{rulesVersion:"trust-source-verification.v1";status:"complete_with_gaps";factLevel:"F2";targetCount:4;independentlyVerifiedCount:number;selfAssertedCount:number;blockedCount:number;results:Array<{id:string;key:string;label:string;url:string;factLevel:"F1";fetchStatus:string;verificationStatus:string;httpStatus:number|null;title:string|null;textExcerpt:string|null;contentSha256:string|null;errorCode:string|null;capturedAt:string;verifiedSignals:string[];limitations:string[]}>;resolvedEvidenceTasks:string[];remainingEvidenceTasks:string[];publicationAuthorized:false;createdAt:string};
   realBrandOnboarding: null | {
     brandName: string;
     status: "draft";
@@ -220,6 +221,7 @@ export class AcceptanceConsoleRepository {
       const gapRouting=await client.query(`select * from evidence_gap_routing_snapshots order by created_at desc,id desc limit 1`);const gapRoutingRow=gapRouting.rows[0];
       const actionPlan=await client.query(`select * from optimization_action_plan_snapshots order by created_at desc,id desc limit 1`);const actionPlanRow=actionPlan.rows[0];
       const trustBlueprint=await client.query(`select * from trust_evidence_blueprints order by created_at desc,id desc limit 1`);const trustBlueprintRow=trustBlueprint.rows[0];
+      const trustVerification=await client.query(`select * from trust_source_verification_snapshots order by created_at desc,id desc limit 1`);const trustVerificationRow=trustVerification.rows[0];
       const onboarding = await client.query(`select package,status from real_brand_onboarding_packages order by created_at desc,id desc limit 1`);
       const onboardingRow = onboarding.rows[0];
       const failures = await client.query(
@@ -409,6 +411,7 @@ export class AcceptanceConsoleRepository {
         evidenceGapRouting:gapRoutingRow?{rulesVersion:gapRoutingRow.rules_version,sourceFindingCount:gapRoutingRow.source_finding_count,clusterCount:gapRoutingRow.cluster_count,createdAt:gapRoutingRow.created_at.toISOString(),clusters:gapRoutingRow.clusters}:null,
         optimizationActionPlan:actionPlanRow?{rulesVersion:actionPlanRow.rules_version,sourceFindingCount:actionPlanRow.source_finding_count,sourceClusterCount:actionPlanRow.source_cluster_count,packageCount:actionPlanRow.package_count,createdAt:actionPlanRow.created_at.toISOString(),packages:actionPlanRow.packages,executionOrder:actionPlanRow.execution_order}:null,
         trustEvidenceBlueprint:trustBlueprintRow?{rulesVersion:trustBlueprintRow.rules_version,status:trustBlueprintRow.status,factLevel:trustBlueprintRow.fact_level,evidenceItemCount:trustBlueprintRow.evidence_item_count,evidenceItems:trustBlueprintRow.evidence_items,pageSections:trustBlueprintRow.page_sections,machineReadableDraft:trustBlueprintRow.machine_readable_draft,prohibitedClaims:trustBlueprintRow.prohibited_claims,nextEvidenceTasks:trustBlueprintRow.next_evidence_tasks,publicationAuthorized:trustBlueprintRow.publication_authorized,createdAt:trustBlueprintRow.created_at.toISOString()}:null,
+        trustSourceVerification:trustVerificationRow?{rulesVersion:trustVerificationRow.rules_version,status:trustVerificationRow.status,factLevel:trustVerificationRow.fact_level,targetCount:trustVerificationRow.target_count,independentlyVerifiedCount:trustVerificationRow.independently_verified_count,selfAssertedCount:trustVerificationRow.self_asserted_count,blockedCount:trustVerificationRow.blocked_count,results:trustVerificationRow.results,resolvedEvidenceTasks:trustVerificationRow.resolved_evidence_tasks,remainingEvidenceTasks:trustVerificationRow.remaining_evidence_tasks,publicationAuthorized:trustVerificationRow.publication_authorized,createdAt:trustVerificationRow.created_at.toISOString()}:null,
         realBrandOnboarding: onboardingRow ? {
           brandName: onboardingRow.package.brandName,
           status: onboardingRow.status,

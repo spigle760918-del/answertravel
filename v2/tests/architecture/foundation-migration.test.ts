@@ -101,4 +101,12 @@ describe("foundation migration guardrails", () => {
     expect(sql).toContain("reject_immutable_mutation");
     expect(sql).toContain("force row level security");
   });
+  it("keeps trust source verification snapshots immutable, unpublished and tenant isolated", async () => {
+    const sql = await readFile(resolve(process.cwd(), "migrations/0019_trust_source_verification.sql"), "utf8");
+    expect(sql).toContain("trust_source_verification_snapshots_append_only");
+    expect(sql).toContain("trust_source_verification_snapshots_no_truncate");
+    expect(sql).toContain("publication_authorized=false");
+    expect(sql).toContain("force row level security");
+    expect(sql).toContain("trust_source_verification_snapshots_tenant_isolation");
+  });
 });

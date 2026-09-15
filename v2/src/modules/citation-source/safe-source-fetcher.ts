@@ -146,6 +146,7 @@ function parseDocument(body: string, contentType: string) {
     ).slice(0, 10_000) || null;
   return { title, author, publishedAt, textExcerpt };
 }
+function decodeBody(bytes:Uint8Array,contentTypeHeader:string):string{const charset=/charset\s*=\s*["']?([^;"'\s]+)/iu.exec(contentTypeHeader)?.[1]?.trim().toLowerCase()??"utf-8";try{return new TextDecoder(charset).decode(bytes);}catch{return new TextDecoder("utf-8").decode(bytes);}}
 
 async function limitedBody(
   response: Response,
@@ -283,7 +284,8 @@ export class SafeSourceFetcher {
             false,
             response.status,
           );
-        const contentType = (response.headers.get("content-type") ?? "")
+        const contentTypeHeader=response.headers.get("content-type")??"";
+        const contentType = contentTypeHeader
           .split(";")[0]!
           .trim()
           .toLowerCase();
@@ -298,7 +300,7 @@ export class SafeSourceFetcher {
           response,
           this.options.maximumBytes ?? 1_000_000,
         );
-        const body = new TextDecoder().decode(bytes);
+        const body = decodeBody(bytes,contentTypeHeader);
         const parsed = parseDocument(body, contentType);
         return {
           status: "succeeded",

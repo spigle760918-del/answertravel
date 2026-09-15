@@ -99,6 +99,20 @@ describe("citation and source evidence contracts", () => {
     expect(result.contentSha256).toMatch(/^[a-f0-9]{64}$/u);
   });
 
+  it("honors legacy Chinese page encodings before extracting evidence text", async () => {
+    const prefix = new TextEncoder().encode("<html><head><title>");
+    const beijing = new Uint8Array([0xb1, 0xb1, 0xbe, 0xa9]);
+    const suffix = new TextEncoder().encode("</title></head><body></body></html>");
+    const bytes = new Uint8Array(prefix.length + beijing.length + suffix.length);
+    bytes.set(prefix); bytes.set(beijing, prefix.length); bytes.set(suffix, prefix.length + beijing.length);
+    const result = await new SafeSourceFetcher({
+      fetchImpl: (async () => new Response(bytes, { headers: { "content-type": "text/html; charset=gbk" } })) as typeof fetch,
+      lookupAddresses: async () => ["93.184.216.34"],
+      allowedDomains: ["example.com"],
+    }).capture("https://example.com/gbk");
+    expect(result.title).toBe("北京");
+  });
+
   it("records unsupported content and oversized bodies as blocked evidence", async () => {
     const lookupAddresses = async () => ["93.184.216.34"];
     const binary = await new SafeSourceFetcher({

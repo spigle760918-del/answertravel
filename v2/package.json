@@ -24,6 +24,7 @@
     "gaps:route": "tsx scripts/route-evidence-gaps.ts",
     "actions:plan": "tsx scripts/create-optimization-action-plan.ts",
     "trust:blueprint": "tsx scripts/create-trust-evidence-blueprint.ts",
+    "trust:verify-sources": "tsx scripts/verify-trust-sources.ts",
     "dev:api": "tsx watch src/main.ts",
     "dev:worker": "tsx watch src/worker.ts",
     "start:api": "tsx src/main.ts",

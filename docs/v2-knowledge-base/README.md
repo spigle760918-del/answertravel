@@ -53,7 +53,7 @@
 | `33-refund-policy-intake-intent-card.md` | 退款、取消与履约政策事实采集 | Gate A-F 已通过并封版 |
 | `34-configurable-action-fact-intake-intent-card.md` | 品牌个性化行动事实采集框架 | Gate A-F 已通过并封版 |
 | `35-personalized-fact-workbench-intent-card.md` | 品牌个性化事实补充工作台 | Gate A-F 已通过并封版 |
-| `36-alpha-readiness-overview-intent-card.md` | 单品牌 DeepSeek Alpha 上线就绪总览 | 设计基线已形成，进入自动核查 |
+| `36-alpha-readiness-overview-intent-card.md` | 单品牌 DeepSeek Alpha 上线就绪总览 | Gate A-D 已完成，Gate E 待验收 |
 
 ## 事实分级
 

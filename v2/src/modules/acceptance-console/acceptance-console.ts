@@ -3,6 +3,13 @@ import { withTenantTransaction } from "../../platform/database.js";
 
 export type AcceptanceOverview = {
   environment: "acceptance_test" | "real_brand_draft" | "real_brand_baseline";
+  alphaReadiness: {
+    rulesVersion: "alpha-readiness.v1";
+    overallStatus: "ready" | "pending" | "blocked";
+    summary: string;
+    items: Array<{ key:string; label:string; status:"ready"|"pending"|"blocked"|"not_in_alpha"; evidence:string; requiredForLaunch:boolean }>;
+    readyCount:number; pendingCount:number; blockedCount:number; notInAlphaCount:number;
+  };
   brand: {
     name: string;
     version: number;
@@ -262,8 +269,26 @@ export class AcceptanceConsoleRepository {
       const sentimentCounts = new Map<string, number>(); for (const claim of geoClaims.rows) sentimentCounts.set(claim.sentiment, (sentimentCounts.get(claim.sentiment) ?? 0) + 1);
       const isRealBrandDraft = b.brand_name === "北京珈程国际旅行社";
       const hasRealAnswers = answers.rows.length > 0;
+      const readinessItems = [
+        { key:"brand_truth",label:"真实品牌真相",status:b.status === "approved" ? "ready" : "pending",evidence:`品牌真相 V${b.version} · ${b.status}`,requiredForLaunch:true },
+        { key:"question_panel",label:"真实游客问题组",status:p.status === "approved" ? "ready" : "pending",evidence:`问题组 V${p.version} · ${(p.candidates as any[]).filter((item:any)=>item.included).length} 条`,requiredForLaunch:true },
+        { key:"deepseek_api",label:"DeepSeek API 真实采样",status:hasRealAnswers ? "ready" : "pending",evidence:hasRealAnswers ? `${answers.rows.length} 条成功回答可下钻` : "尚无真实回答",requiredForLaunch:true },
+        { key:"evidence_chain",label:"不可变证据与指标下钻",status:hasRealAnswers && geoRuns.rows.length > 0 ? "ready" : "pending",evidence:`${answers.rows.length} 条回答 · ${geoRuns.rows.length} 条 GEO 分析`,requiredForLaunch:true },
+        { key:"periodic_monitoring",label:"周期监测与失败留痕",status:periodicRow ? "ready" : "pending",evidence:periodicRow ? `监测计划 ${periodicRow.status}` : "尚未建立监测计划",requiredForLaunch:true },
+        { key:"web_console",label:"文旅业务验收网页",status:"ready",evidence:"当前页面由真实验收接口生成，无模拟业务数字",requiredForLaunch:true },
+        { key:"linux_ci",label:"GitHub Linux CI",status:"ready",evidence:"工作台实现提交 2638118 的 Linux CI 34937879517 已成功",requiredForLaunch:true },
+        { key:"aliyun_native",label:"阿里云原生运行验证",status:"blocked",evidence:"blocked-by-host-policy：宝塔主机策略阻断，未冒充通过",requiredForLaunch:true },
+        { key:"https_domain",label:"域名与 HTTPS 预发布",status:"pending",evidence:"尚未完成本版本的公网 HTTPS 验收",requiredForLaunch:true },
+        { key:"cloud_backup",label:"云端备份与恢复",status:"pending",evidence:"本地恢复已通过，云端备份与恢复尚未验收",requiredForLaunch:true },
+        { key:"cloud_logs_alerts",label:"云端日志与最小告警",status:"pending",evidence:"尚未完成云端告警验收",requiredForLaunch:true },
+        { key:"multi_model",label:"多模型并行监控",status:"not_in_alpha",evidence:"属于后续版本，本次仅 DeepSeek API",requiredForLaunch:false },
+        { key:"multi_account_publish",label:"多平台多账号发布",status:"not_in_alpha",evidence:"属于后续版本，Alpha 不自动对外发布",requiredForLaunch:false },
+        { key:"web_app_sampling",label:"AI Web/App 搜索终端",status:"not_in_alpha",evidence:"API 采样不代表 Web/App 搜索表现",requiredForLaunch:false },
+      ] as const;
+      const launchBlockers=readinessItems.filter(item=>item.requiredForLaunch&&(item.status==="pending"||item.status==="blocked"));
       return {
         environment: isRealBrandDraft ? (hasRealAnswers ? "real_brand_baseline" : "real_brand_draft") : "acceptance_test",
+        alphaReadiness:{rulesVersion:"alpha-readiness.v1",overallStatus:launchBlockers.some(item=>item.status==="blocked")?"blocked":launchBlockers.length?"pending":"ready",summary:launchBlockers.length?`距离公网 Alpha 上线还有 ${launchBlockers.length} 个硬门槛未满足。`:"单品牌 DeepSeek API Alpha 上线硬门槛已满足。",items:readinessItems.map(item=>({...item})),readyCount:readinessItems.filter(item=>item.status==="ready").length,pendingCount:readinessItems.filter(item=>item.status==="pending").length,blockedCount:readinessItems.filter(item=>item.status==="blocked").length,notInAlphaCount:readinessItems.filter(item=>item.status==="not_in_alpha").length},
         brand: {
           name: b.brand_name,
           version: b.version,

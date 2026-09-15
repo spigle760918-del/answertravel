@@ -166,6 +166,21 @@ export default function App() {
               </section>
               <section className="panel">
                 <div className="panel-head">
+                  <div><p className="eyebrow">Alpha 上线就绪总览</p><h2>{data.alphaReadiness.summary}</h2></div>
+                  <StatusPill value={data.alphaReadiness.overallStatus === "ready" ? "可上线" : data.alphaReadiness.overallStatus === "blocked" ? "仍有阻塞" : "仍有待办"} tone={data.alphaReadiness.overallStatus === "ready" ? "good" : "warn"}/>
+                </div>
+                <div className="stat-grid decision-stats">
+                  <article><span>已就绪</span><strong>{data.alphaReadiness.readyCount}</strong><small>有可追溯证据</small></article>
+                  <article><span>待完成</span><strong>{data.alphaReadiness.pendingCount}</strong><small>尚未执行或验收</small></article>
+                  <article><span>外部阻塞</span><strong>{data.alphaReadiness.blockedCount}</strong><small>不冒充通过</small></article>
+                  <article><span>不属本次 Alpha</span><strong>{data.alphaReadiness.notInAlphaCount}</strong><small>后续版本处理</small></article>
+                </div>
+                <div className="fact-list">
+                  {data.alphaReadiness.items.map(item=><article key={item.key}><div><StatusPill value={item.status === "ready" ? "已就绪" : item.status === "pending" ? "待完成" : item.status === "blocked" ? "被阻塞" : "不属本次 Alpha"} tone={item.status === "ready" ? "good" : item.status === "not_in_alpha" ? "neutral" : "warn"}/>{item.requiredForLaunch?<StatusPill value="上线硬门槛"/>:null}</div><h3>{item.label}</h3><p>{item.evidence}</p></article>)}
+                </div>
+              </section>
+              <section className="panel">
+                <div className="panel-head">
                   <div>
                     <p className="eyebrow">能力边界</p>
                     <h2>现在能确认什么</h2>

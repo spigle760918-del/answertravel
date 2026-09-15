@@ -66,7 +66,7 @@ describe.runIf(Boolean(databaseUrl && adminUrl && redisUrl))("acceptance console
     try {
       const response = await app.inject({ url: "/api/acceptance/overview", headers: { authorization: "Bearer browser-secret", "x-api-key": "header-secret" } });
       expect(response.statusCode).toBe(200);
-      expect(response.json()).toMatchObject({ environment: "acceptance_test", brand: { name: "验收品牌甲" }, observations: { plans: [], answers: [] } });
+      expect(response.json()).toMatchObject({ environment: "acceptance_test", brand: { name: "验收品牌甲" }, observations: { plans: [], answers: [] }, alphaReadiness:{rulesVersion:"alpha-readiness.v1",overallStatus:"blocked",blockedCount:1,notInAlphaCount:3} });
       expect(response.body).not.toContain("fixture-key-never-persist");
       expect(response.body).not.toContain("browser-secret");
       expect(response.body).not.toContain("header-secret");

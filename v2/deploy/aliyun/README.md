@@ -94,6 +94,10 @@ PUBLIC_HTTPS_EVIDENCE=当前实例公网首页、验收接口和就绪接口的 
 - API/Worker 异常时只停止 AnswerTravel 自身进程，不操作现有 PHP、MySQL 或其他业务。
 - 禁止执行 `docker compose down -v`；不得删除 PostgreSQL/Redis 数据卷。
 
+## 生产备份与隔离恢复演练
+
+使用`scripts/server-backup-restore-drill.sh`执行。脚本将备份写入`/www/backup/answertravel-v2/<时间戳>/`，并仅在唯一命名的临时容器和临时卷中恢复验证。脚本不得挂载、替换或删除生产数据卷；成功结果必须包含`BACKUP_RESTORE_GATE=PASS`、两份SHA-256以及生产/恢复计数一致证据。
+
 ## 上线前必须取得的证据
 
 - Node.js 24 版本与生产构建哈希；

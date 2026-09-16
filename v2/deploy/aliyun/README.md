@@ -10,6 +10,7 @@
 - `DATABASE_URL` 使用无建库、无迁移、无超级用户权限的运行账号。
 - `MIGRATION_DATABASE_URL` 仅在发布迁移步骤临时注入，不写入 API/Worker 常驻配置。
 - DeepSeek Key 不得写入 Git、发布包、日志或 Nginx 配置。
+- Docker 运行时的 `WEB_ROOT` 必须为容器内路径 `/app/web-dist`，不得填写宿主机站点目录。
 
 ## 生产构建
 

@@ -37,11 +37,13 @@ services:
       PORT: 4288
       DATABASE_URL: postgresql://${POSTGRES_RUNTIME_USER}:${POSTGRES_RUNTIME_PASSWORD}@postgres:5432/${POSTGRES_DB}
       REDIS_URL: redis://redis:6379/2
-    ports: ["127.0.0.1:4288:4288"]
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
-    networks: [answertravel]
+    networks:
+      answertravel: {}
+      answertravel_proxy:
+        ipv4_address: 172.30.0.10
     mem_limit: 512m
     cpus: 0.75
     healthcheck:
@@ -65,6 +67,9 @@ services:
     cpus: 0.75
 networks:
   answertravel: { internal: true }
+  answertravel_proxy:
+    external: true
+    name: answertravel_proxy
 volumes:
   postgres-data:
   redis-data:

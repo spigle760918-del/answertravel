@@ -35,7 +35,8 @@
     "start:worker": "tsx src/worker.ts",
     "start:api:prod": "node dist/src/main.js",
     "start:worker:prod": "node dist/src/worker.js",
-    "db:migrate:prod": "node dist/scripts/migrate.js"
+    "db:migrate:prod": "node dist/scripts/migrate.js",
+    "production:init:jiacheng": "node dist/scripts/initialize-jiacheng-production.js"
   },
   "dependencies": {
     "@fastify/static": "10.1.3",

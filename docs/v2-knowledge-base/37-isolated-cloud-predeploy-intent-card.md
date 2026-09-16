@@ -88,7 +88,7 @@
 - 用户已将 `/www/swap` 扩展至4 GiB并启用，当前使用量接近0，且已写入 `/etc/fstab` 持久化。
 - 数据库正式启动前必须补充独立迁移账号密码；管理员、迁移账号、运行账号三者不得复用。
 - 在现有8 GiB内存上继续采用受限 Docker Compose：PostgreSQL 1536 MiB、Redis 384 MiB、API 512 MiB、Worker 512 MiB，并设置 CPU 上限。
-- Compose 仅将 API 映射到 `127.0.0.1:4288`；数据库和 Redis 不发布宿主机端口，网络设为内部网络。
+- 实际宝塔主机上 Docker 自动 NAT 未建立 API 端口规则；生产路径改为 API 同时接入内部业务网络和外部固定代理网络，宝塔 Nginx 反代到 `172.30.0.10:4288`；PostgreSQL 和 Redis 仍不发布宿主机端口。
 - 这只解除 swap 风险门槛，不代表容器已经启动、数据库已迁移、HTTPS已配置或公网已上线。
 
 ## 基础容器启动证据（2026-09-16）
@@ -98,6 +98,15 @@
 - 宿主机可用内存约4.65 GiB，4 GiB swap中约0.93 GiB已使用。
 - Redis 提示 `vm.overcommit_memory` 建议开启；该提示不影响当前健康状态，本阶段不修改宿主机内核参数。
 - 数据库迁移、API/Worker启动、密钥实际调用、宝塔代理和HTTPS仍未执行。
+
+## 公网 API 就绪与固定代理网络（2026-09-16）
+
+- PostgreSQL 完成 `0001` 至 `0021` 迁移；迁移账号和运行账号均为非超级用户，运行账号无建库、建角色、绕过 RLS 或 public schema 创建权限。
+- API 容器健康，`https://geo.21y.com/health/live` 与 `/health/ready` 均真实返回 HTTP/2 200，PostgreSQL 和 Redis 依赖为 `up`。
+- 宝塔 Nginx 已通过 Docker 网桥访问 API；原动态地址 `172.20.0.4` 只能作为临时路径，不作为长期生产契约。
+- 已选定无冲突子网 `172.30.0.0/24` 的外部网络 `answertravel_proxy`，API 固定地址为 `172.30.0.10`。手工挂网只用于预验，容器重建后必须由 Compose 声明恢复该地址。
+- 新服务器部署前必须先创建并核对 `answertravel_proxy` 的子网/网关；禁止 `docker compose down -v`。
+- Worker、生产品牌数据迁入、`ACCEPTANCE_TENANT_ID`、备份恢复演练仍未完成，不宣称 Alpha 全部上线。
 
 ## 独立域名
 

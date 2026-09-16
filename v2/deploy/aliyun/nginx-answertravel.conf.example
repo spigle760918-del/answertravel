@@ -3,7 +3,7 @@ server {
     server_name geo.21y.com;
 
     location / {
-        proxy_pass http://127.0.0.1:4288;
+        proxy_pass http://172.30.0.10:4288;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -14,12 +14,12 @@ server {
     }
 
     location = /health/live {
-        proxy_pass http://127.0.0.1:4288/health/live;
+        proxy_pass http://172.30.0.10:4288/health/live;
         access_log off;
     }
 
     location = /health/ready {
-        proxy_pass http://127.0.0.1:4288/health/ready;
+        proxy_pass http://172.30.0.10:4288/health/ready;
         access_log off;
     }
 }

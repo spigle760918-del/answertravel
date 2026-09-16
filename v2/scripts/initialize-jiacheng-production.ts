@@ -41,16 +41,19 @@ const brandName = "北京珈程国际旅行社";
 const pool = createDatabasePool(databaseUrl);
 
 try {
-  await pool.query(
-    `insert into tenants(id,slug,display_name) values($1,$2,$3)
-     on conflict (id) do nothing`,
-    [tenantId, tenantSlug, brandName],
-  );
-  const tenant = await pool.query<{ id: string; slug: string; display_name: string }>(
-    "select id,slug,display_name from tenants where id=$1",
-    [tenantId],
-  );
-  if (tenant.rows[0]?.slug !== tenantSlug || tenant.rows[0]?.display_name !== brandName) {
+  const tenant = await withTenantTransaction(pool, tenantId, async (client) => {
+    await client.query(
+      `insert into tenants(id,slug,display_name) values($1,$2,$3)
+       on conflict (id) do nothing`,
+      [tenantId, tenantSlug, brandName],
+    );
+    const result = await client.query<{ id: string; slug: string; display_name: string }>(
+      "select id,slug,display_name from tenants where id=$1",
+      [tenantId],
+    );
+    return result.rows[0];
+  });
+  if (tenant?.slug !== tenantSlug || tenant.display_name !== brandName) {
     throw new Error("The deterministic Jiacheng tenant identity conflicts with existing data.");
   }
 

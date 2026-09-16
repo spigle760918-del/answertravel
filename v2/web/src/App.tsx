@@ -116,7 +116,7 @@ export default function App() {
   const alphaReadiness=data.alphaReadiness??{rulesVersion:"alpha-readiness.v1" as const,overallStatus:fallbackOpen.some(x=>x.status==="blocked")?"blocked" as const:fallbackOpen.length?"pending" as const:"ready" as const,summary:fallbackOpen.length?`距离公网 Alpha 上线还有 ${fallbackOpen.length} 个硬门槛未满足。`:"单品牌 DeepSeek API Alpha 上线硬门槛已满足。",readyCount:fallbackItems.filter(x=>x.status==="ready").length,pendingCount:fallbackItems.filter(x=>x.status==="pending").length,blockedCount:fallbackItems.filter(x=>x.status==="blocked").length,notInAlphaCount:fallbackItems.filter(x=>x.status==="not_in_alpha").length,items:fallbackItems};
   return (
     <>
-      <aside className="test-banner" aria-label="数据环境">{data.environment === "real_brand_baseline" ? "真实品牌首次观察 · DeepSeek API" : data.environment === "real_brand_draft" ? "真实品牌问题草案 · 尚未进行答案采样" : "验收测试数据 · 不代表真实品牌运营结果"}</aside>
+      <aside className="test-banner" aria-label="数据环境">{data.environment === "real_brand_baseline" ? "真实品牌首次观察 · DeepSeek API" : data.environment === "real_brand_draft" ? data.questions.status === "approved" ? "真实品牌问题组已批准 · 尚未进行答案采样" : "真实品牌问题草案 · 尚未进行答案采样" : "验收测试数据 · 不代表真实品牌运营结果"}</aside>
       <header>
         <div className="identity">
           <span className="brand-mark">A</span>

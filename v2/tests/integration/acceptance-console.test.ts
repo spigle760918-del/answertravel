@@ -76,6 +76,26 @@ describe.runIf(Boolean(databaseUrl && adminUrl && redisUrl))("acceptance console
     } finally { await app.close(); }
   });
 
+  it("marks cloud runtime and HTTPS ready only when current-instance evidence is configured", async () => {
+    const app = buildApp({
+      ...config(tenantA),
+      ALIYUN_RUNTIME_EVIDENCE: "阿里云容器运行证据",
+      PUBLIC_HTTPS_EVIDENCE: "公网 HTTPS 验收证据",
+    });
+    try {
+      const response = await app.inject({ url: "/api/acceptance/overview" });
+      expect(response.statusCode).toBe(200);
+      const overview = response.json();
+      expect(overview.alphaReadiness.blockedCount).toBe(0);
+      expect(overview.alphaReadiness.items).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ key: "aliyun_native", status: "ready", evidence: "阿里云容器运行证据" }),
+          expect.objectContaining({ key: "https_domain", status: "ready", evidence: "公网 HTTPS 验收证据" }),
+        ]),
+      );
+    } finally { await app.close(); }
+  });
+
   it("ignores arbitrary tenant query parameters and does not cross tenant boundaries", async () => {
     const app = buildApp(config(tenantB));
     try {

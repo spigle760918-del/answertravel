@@ -177,8 +177,16 @@ export type AcceptanceOverview = {
   limitations: string[];
 };
 
+export type DeploymentReadinessEvidence = {
+  aliyunRuntime?: string;
+  publicHttps?: string;
+};
+
 export class AcceptanceConsoleRepository {
-  constructor(private readonly pool: pg.Pool) {}
+  constructor(
+    private readonly pool: pg.Pool,
+    private readonly deploymentEvidence: DeploymentReadinessEvidence = {},
+  ) {}
   async overview(tenantId: string): Promise<AcceptanceOverview> {
     return withTenantTransaction(this.pool, tenantId, async (client) => {
       const brand = await client.query(
@@ -277,8 +285,8 @@ export class AcceptanceConsoleRepository {
         { key:"periodic_monitoring",label:"周期监测与失败留痕",status:periodicRow ? "ready" : "pending",evidence:periodicRow ? `监测计划 ${periodicRow.status}` : "尚未建立监测计划",requiredForLaunch:true },
         { key:"web_console",label:"文旅业务验收网页",status:"ready",evidence:"当前页面由真实验收接口生成，无模拟业务数字",requiredForLaunch:true },
         { key:"linux_ci",label:"GitHub Linux CI",status:"ready",evidence:"工作台实现提交 2638118 的 Linux CI 34937879517 已成功",requiredForLaunch:true },
-        { key:"aliyun_native",label:"阿里云原生运行验证",status:"blocked",evidence:"blocked-by-host-policy：宝塔主机策略阻断，未冒充通过",requiredForLaunch:true },
-        { key:"https_domain",label:"域名与 HTTPS 预发布",status:"pending",evidence:"尚未完成本版本的公网 HTTPS 验收",requiredForLaunch:true },
+        { key:"aliyun_native",label:"阿里云原生运行验证",status:this.deploymentEvidence.aliyunRuntime ? "ready" : "blocked",evidence:this.deploymentEvidence.aliyunRuntime ?? "blocked-by-host-policy：尚无当前实例的阿里云运行证据，未冒充通过",requiredForLaunch:true },
+        { key:"https_domain",label:"域名与 HTTPS 预发布",status:this.deploymentEvidence.publicHttps ? "ready" : "pending",evidence:this.deploymentEvidence.publicHttps ?? "尚无当前实例的公网 HTTPS 验收证据",requiredForLaunch:true },
         { key:"cloud_backup",label:"云端备份与恢复",status:"pending",evidence:"本地恢复已通过，云端备份与恢复尚未验收",requiredForLaunch:true },
         { key:"cloud_logs_alerts",label:"云端日志与最小告警",status:"pending",evidence:"尚未完成云端告警验收",requiredForLaunch:true },
         { key:"multi_model",label:"多模型并行监控",status:"not_in_alpha",evidence:"属于后续版本，本次仅 DeepSeek API",requiredForLaunch:false },

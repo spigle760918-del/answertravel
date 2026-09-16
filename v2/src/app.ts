@@ -23,7 +23,16 @@ export function buildApp(config: AppConfig): FastifyInstance {
   });
   app.get("/api/acceptance/overview", async (_request, reply) => {
     if (!config.ACCEPTANCE_TENANT_ID) return reply.code(404).send({ code: "acceptance_console_disabled" });
-    try { return await new AcceptanceConsoleRepository(pool).overview(config.ACCEPTANCE_TENANT_ID); }
+    try {
+      return await new AcceptanceConsoleRepository(pool, {
+        ...(config.ALIYUN_RUNTIME_EVIDENCE
+          ? { aliyunRuntime: config.ALIYUN_RUNTIME_EVIDENCE }
+          : {}),
+        ...(config.PUBLIC_HTTPS_EVIDENCE
+          ? { publicHttps: config.PUBLIC_HTTPS_EVIDENCE }
+          : {}),
+      }).overview(config.ACCEPTANCE_TENANT_ID);
+    }
     catch (error) {
       app.log.error({ err: error, event: "acceptance_console.read_failed" }, "Acceptance console data could not be read");
       return reply.code(503).send({ code: "acceptance_data_unavailable", message: "验收数据暂时不可用，请稍后重试。" });

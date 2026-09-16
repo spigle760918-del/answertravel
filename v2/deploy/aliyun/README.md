@@ -75,6 +75,17 @@ publicationAuthorized=false
 
 输出的 `tenantId` 用于服务器 `ACCEPTANCE_TENANT_ID`，不是密钥。在品牌数据和预算边界未复核前，Worker 应保持停止。
 
+## 当前实例部署证据
+
+验收台不得把部署前的固定文案当作当前服务器状态。只有当前实例实际完成核验后，才可在 `.env.production` 写入：
+
+```text
+ALIYUN_RUNTIME_EVIDENCE=当前实例的 PostgreSQL、Redis、API、Worker 运行验收摘要
+PUBLIC_HTTPS_EVIDENCE=当前实例公网首页、验收接口和就绪接口的 HTTPS 验收摘要
+```
+
+两项未配置时，验收台分别保持 `blocked` 和 `pending`。更换服务器时不得复制旧实例的通过状态；必须重新核验后填写。证据字段不得包含密码、API Key、Cookie 或数据库连接串。
+
 ## 回滚
 
 - 代码使用 `releases/<版本>/` 与 `current` 指针切换；回滚只切回上一发布版本。

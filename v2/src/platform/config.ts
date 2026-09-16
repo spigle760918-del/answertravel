@@ -15,6 +15,8 @@ const ConfigSchema = z.object({
   ACCEPTANCE_TENANT_ID: z.string().uuid().optional(),
   WEB_ROOT: z.string().min(1).optional(),
   SOURCE_FETCH_ALLOWED_DOMAINS: z.string().optional(),
+  ALIYUN_RUNTIME_EVIDENCE: z.string().min(1).optional(),
+  PUBLIC_HTTPS_EVIDENCE: z.string().min(1).optional(),
 });
 
 export type AppConfig = z.infer<typeof ConfigSchema>;

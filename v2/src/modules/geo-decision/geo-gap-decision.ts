@@ -20,6 +20,7 @@ export const gapDecisionInputSchema = z.object({
   competitorMentions: z.array(z.object({ entityId: z.string().min(1), count: z.number().int().nonnegative() })),
   brandTruthFactCount: z.number().int().nonnegative(), citationCandidateCount: z.number().int().nonnegative(),
   geoRunIds: z.array(z.string().uuid()), planIds: z.array(z.string().uuid()),
+  websiteDiagnosisIds: z.array(z.string().uuid()).default([]),
   verifiedSignals: z.array(verifiedSignalSchema).default([]), websiteEvidenceConnected: z.boolean(),
 });
 

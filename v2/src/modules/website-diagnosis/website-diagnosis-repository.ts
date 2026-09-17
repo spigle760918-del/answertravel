@@ -1,0 +1,13 @@
+import type pg from "pg";
+import { createAuditEvent } from "../../kernel/audit-event.js";
+import { appendAuditEvent } from "../../platform/audit.js";
+import { withTenantTransaction } from "../../platform/database.js";
+import { websiteDiagnosisSchema, type WebsiteDiagnosis } from "./website-diagnosis.js";
+
+export class WebsiteDiagnosisRepository{
+  constructor(private readonly pool:pg.Pool){}
+  async byHash(tenantId:string,hash:string){return withTenantTransaction(this.pool,tenantId,async c=>{const r=await c.query("select * from website_diagnosis_snapshots where input_sha256=$1",[hash]);return r.rows[0]?this.map(r.rows[0]):null;});}
+  async latest(tenantId:string){return withTenantTransaction(this.pool,tenantId,async c=>{const r=await c.query("select * from website_diagnosis_snapshots order by created_at desc,id desc limit 1");return r.rows[0]?this.map(r.rows[0]):null;});}
+  async save(raw:WebsiteDiagnosis){const x=websiteDiagnosisSchema.parse(raw);return withTenantTransaction(this.pool,x.tenantId,async c=>{const r=await c.query(`insert into website_diagnosis_snapshots(id,tenant_id,rules_version,input_sha256,status,fact_level,target_count,succeeded_count,blocked_count,failed_count,pages,strengths,gaps,self_reported_claims,decision_signals,publication_authorized,created_at) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::jsonb,$12::jsonb,$13::jsonb,$14::jsonb,$15::jsonb,$16,$17) returning *`,[x.id,x.tenantId,x.rulesVersion,x.inputSha256,x.status,x.factLevel,x.targetCount,x.succeededCount,x.blockedCount,x.failedCount,JSON.stringify(x.pages),JSON.stringify(x.strengths),JSON.stringify(x.gaps),JSON.stringify(x.selfReportedClaims),JSON.stringify(x.decisionSignals),x.publicationAuthorized,x.createdAt]);await appendAuditEvent(c,createAuditEvent({tenantId:x.tenantId,actorType:"agent",actorId:"website-diagnosis.v1",traceId:x.id,action:"website_diagnosis.completed",resourceType:"website_diagnosis_snapshot",resourceId:x.id,detail:{targetCount:x.targetCount,succeededCount:x.succeededCount,gapCount:x.gaps.length,publicationAuthorized:false}}));return this.map(r.rows[0]);});}
+  private map(x:any){return websiteDiagnosisSchema.parse({id:x.id,tenantId:x.tenant_id,rulesVersion:x.rules_version,inputSha256:x.input_sha256,status:x.status,factLevel:x.fact_level,targetCount:x.target_count,succeededCount:x.succeeded_count,blockedCount:x.blocked_count,failedCount:x.failed_count,pages:x.pages,strengths:x.strengths,gaps:x.gaps,selfReportedClaims:x.self_reported_claims,decisionSignals:x.decision_signals,publicationAuthorized:x.publication_authorized,createdAt:x.created_at.toISOString()});}
+}

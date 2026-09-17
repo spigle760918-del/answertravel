@@ -29,13 +29,16 @@ export class GeoGapDecisionRepository {
       }
       const truth = await client.query(`select facts from brand_truth_cards where status='approved' order by version desc limit 1`);
       const citations = runIds.length ? await client.query(`select count(*)::int count from citation_events where answer_id=any($1::uuid[])`, [runs.rows.map((row) => row.answer_id)]) : { rows: [{ count: 0 }] };
+      const website = await client.query(`select id,decision_signals from website_diagnosis_snapshots order by created_at desc,id desc limit 1`);
+      const websiteRow = website.rows[0];
       return gapDecisionInputSchema.parse({
         tenantId, naturalSampleCount: runIds.length, observationPlanCount: planIds.length,
         brandMentionCount: brandMentionRuns.size,
         competitorMentions: [...competitorRuns.entries()].map(([entityId, ids]) => ({ entityId, count: ids.size })),
         brandTruthFactCount: Array.isArray(truth.rows[0]?.facts) ? truth.rows[0].facts.length : 0,
         citationCandidateCount: citations.rows[0]?.count ?? 0, geoRunIds: runIds, planIds,
-        verifiedSignals: [], websiteEvidenceConnected: false,
+        websiteDiagnosisIds: websiteRow ? [websiteRow.id] : [],
+        verifiedSignals: websiteRow?.decision_signals ?? [], websiteEvidenceConnected: Boolean(websiteRow),
       });
     });
   }

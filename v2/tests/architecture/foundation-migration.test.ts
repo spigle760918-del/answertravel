@@ -125,4 +125,12 @@ describe("foundation migration guardrails", () => {
     expect(sql).toContain("force row level security");
     expect(sql).toContain("action_fact_intake_snapshots_tenant_isolation");
   });
+  it("keeps website diagnosis immutable, unpublished and tenant isolated", async () => {
+    const sql = await readFile(resolve(process.cwd(), "migrations/0022_website_diagnosis.sql"), "utf8");
+    expect(sql).toContain("website_diagnosis_snapshots_append_only");
+    expect(sql).toContain("website_diagnosis_snapshots_no_truncate");
+    expect(sql).toContain("publication_authorized=false");
+    expect(sql).toContain("force row level security");
+    expect(sql).toContain("website_diagnosis_snapshots_tenant_isolation");
+  });
 });

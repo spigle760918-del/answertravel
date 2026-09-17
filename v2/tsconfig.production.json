@@ -12,7 +12,8 @@
     "scripts/migrate.ts",
     "scripts/initialize-jiacheng-production.ts",
     "scripts/create-jiacheng-production-baseline.ts",
-    "scripts/recover-jiacheng-production-baseline.ts"
+    "scripts/recover-jiacheng-production-baseline.ts",
+    "scripts/diagnose-jiacheng-website.ts"
   ],
   "exclude": ["tests", "web", ".runtime", "web-dist", "dist"]
 }

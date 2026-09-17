@@ -16,6 +16,17 @@ export type SourceFetchResult = {
   contentSha256: string | null;
   errorCode: string | null;
   retryable: boolean;
+  documentSignals?: null | {
+    metaDescription: string | null;
+    canonicalUrl: string | null;
+    robots: string | null;
+    h1Count: number;
+    h2Count: number;
+    jsonLdTypes: string[];
+    imageCount: number;
+    missingAltCount: number;
+    internalLinkCount: number;
+  };
 };
 
 const defaultLookup: LookupAddresses = async (hostname) =>
@@ -122,6 +133,7 @@ function parseDocument(body: string, contentType: string) {
       author: null,
       publishedAt: null,
       textExcerpt: body.replace(/\s+/gu, " ").trim().slice(0, 10_000) || null,
+      documentSignals: null,
     };
   const title =
     decode(
@@ -144,7 +156,21 @@ function parseDocument(body: string, contentType: string) {
         .replace(/\s+/gu, " ")
         .trim(),
     ).slice(0, 10_000) || null;
-  return { title, author, publishedAt, textExcerpt };
+  const metaDescription = metadata(body, ["description"]);
+  const canonicalUrl = /<link[^>]+rel=["']canonical["'][^>]+href=["']([^"']+)["']/iu.exec(body)?.[1]
+    ?? /<link[^>]+href=["']([^"']+)["'][^>]+rel=["']canonical["']/iu.exec(body)?.[1]
+    ?? null;
+  const robots = metadata(body, ["robots"]);
+  const h1Count = (body.match(/<h1\b/giu) ?? []).length;
+  const h2Count = (body.match(/<h2\b/giu) ?? []).length;
+  const jsonLdTypes = [...body.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/giu)]
+    .flatMap((match) => [...(match[1] ?? "").matchAll(/["']@type["']\s*:\s*["']([^"']+)["']/giu)].map((item) => item[1]!))
+    .slice(0, 20);
+  const imageTags = body.match(/<img\b[^>]*>/giu) ?? [];
+  const imageCount = imageTags.length;
+  const missingAltCount = imageTags.filter((tag) => !/\balt\s*=\s*["'][^"']+["']/iu.test(tag)).length;
+  const internalLinkCount = (body.match(/<a\b[^>]+href=["'](?:https?:\/\/(?:www\.)?jiacheng666\.com)?\//giu) ?? []).length;
+  return { title, author, publishedAt, textExcerpt, documentSignals: { metaDescription, canonicalUrl, robots, h1Count, h2Count, jsonLdTypes, imageCount, missingAltCount, internalLinkCount } };
 }
 function decodeBody(bytes:Uint8Array,contentTypeHeader:string):string{const charset=/charset\s*=\s*["']?([^;"'\s]+)/iu.exec(contentTypeHeader)?.[1]?.trim().toLowerCase()??"utf-8";try{return new TextDecoder(charset).decode(bytes);}catch{return new TextDecoder("utf-8").decode(bytes);}}
 
@@ -331,6 +357,7 @@ export class SafeSourceFetcher {
         contentSha256: null,
         errorCode: known.code,
         retryable: known.retryable,
+        documentSignals: null,
       };
     }
   }

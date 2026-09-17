@@ -12,7 +12,7 @@ export class GeoGapDecisionService {
     if (existing) return { diagnosisId: existing.diagnosis.id, idempotent: true };
     const draft = decideGeoGap(input), diagnosisId = randomUUID(), now = new Date().toISOString();
     const strongest = [...input.competitorMentions].sort((a,b) => b.count-a.count)[0] ?? null;
-    const evidenceRefs = [...input.geoRunIds.map((id) => `geo-run:${id}`), ...input.planIds.map((id) => `observation-plan:${id}`)];
+    const evidenceRefs = [...input.geoRunIds.map((id) => `geo-run:${id}`), ...input.planIds.map((id) => `observation-plan:${id}`), ...input.websiteDiagnosisIds.map((id) => `website-diagnosis:${id}`)];
     const diagnosis = diagnosisSnapshotSchema.parse({ id:diagnosisId,tenantId,rulesVersion:"geo-gap-decision.v1",inputSha256,status:"completed",evidenceStatus:draft.evidenceStatus,factLevel:draft.factLevel,
       sampleCount:input.naturalSampleCount,observationPlanCount:input.observationPlanCount,brandMentionCount:input.brandMentionCount,strongestCompetitorId:strongest?.entityId ?? null,strongestCompetitorMentionCount:strongest?.count ?? 0,
       primaryRootCause:draft.rootCause,summary:draft.summary,alternatives:draft.alternatives,missingEvidence:draft.missingEvidence,evidenceRefs,createdAt:now });

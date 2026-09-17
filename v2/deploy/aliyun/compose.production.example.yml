@@ -62,7 +62,9 @@ services:
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
-    networks: [answertravel]
+    networks:
+      answertravel: {}
+      answertravel_proxy: {}
     mem_limit: 512m
     cpus: 0.75
 networks:

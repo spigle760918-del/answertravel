@@ -131,6 +131,7 @@
 | F-061 | 生产首次真实观察入口已在本地完成：默认dry-run，真实执行需`--execute`与固定授权标记；固定生产租户、批准问题快照、40个幂等目标和60,000 Token计划上限，并对未知计划/回答、周期计划、问题漂移及无关队列任务fail-closed。Node.js 24.21.0下类型检查、Web构建、103项非集成测试与生产服务构建通过；未连接生产库、未入队、未调用DeepSeek | 2026-09-17 |
 | F-062 | 阿里云生产首次观察dry-run通过：生产租户与已批准问题组V2匹配，20条问题×2轮共40个目标，模型`deepseek-chat`、API终端、计划Token上限60,000；当前观察计划0、原始回答0、队列待处理任务0，输出`deepseekCalled=false`与`executionAuthorized=false`。未写生产数据库、未入队、未产生DeepSeek费用；进入唯一真实费用授权门禁 | 2026-09-17 |
 | F-063 | 用户明确回复`YES，授权北京珈程生产首次真实观察：最多40次DeepSeek API调用，60000 Token上限`。授权仅覆盖固定20条已批准问题×2轮的单次生产基线及40个幂等任务，不授权追加预算、周期监测、竞品直问、多模型、内容生成、官网修改或发布 | 2026-09-17 |
+| F-064 | 首次生产观察40个目标全部在Provider调用前失败：每目标3次`network_error`，共120条不可变失败尝试，成功回答0、Token 0。独立检查确认`aliyun_answertravel Internal=true`且Worker仅挂该网络时访问DeepSeek返回`EAI_AGAIN`；同镜像经`answertravel_proxy`返回HTTP 401。`internal=true`是保护PostgreSQL/Redis的既定安全设计，不应放开整个网络；修复为Worker双网连接，数据服务继续仅在内部网络 | 2026-09-17 |
 
 ## Phase 1 内部实现选择
 

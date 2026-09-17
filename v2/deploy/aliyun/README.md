@@ -7,6 +7,7 @@
 - 使用独立目录 `/www/wwwroot/answertravel-v2`，不得覆盖现有站点目录。
 - API 在 Compose 内监听 `0.0.0.0:4288`，但不发布宿主机端口；宝塔 Nginx 只通过固定代理网络地址 `172.30.0.10:4288` 访问。
 - PostgreSQL、Redis 仅监听本机或私网，禁止开放公网端口。
+- `answertravel` 保持 `internal: true`；API和Worker通过该网络访问PostgreSQL/Redis。只有需要公网出站的API/Worker额外挂载非内部网络`answertravel_proxy`，不得为修复Worker出站而放开整个数据网络。
 - `DATABASE_URL` 使用无建库、无迁移、无超级用户权限的运行账号。
 - `MIGRATION_DATABASE_URL` 仅在发布迁移步骤临时注入，不写入 API/Worker 常驻配置。
 - DeepSeek Key 不得写入 Git、发布包、日志或 Nginx 配置。
@@ -58,6 +59,8 @@ docker network inspect answertravel_proxy \
 ```
 
 API 在该网络中固定为 `172.30.0.10`。手工执行 `docker network connect` 只用于切换前预验，容器重建后的最终状态必须以 Compose 声明为准。如果外部网络被删除，Compose 应直接失败并停止部署，不得自动改用动态容器 IP。
+
+Worker不发布端口，也不配置固定IP，但必须同时连接`answertravel`和`answertravel_proxy`：前者用于访问PostgreSQL/Redis，后者仅提供DeepSeek API所需的公网出站。PostgreSQL和Redis不得连接`answertravel_proxy`。
 
 ## 北京珈程生产数据初始化
 

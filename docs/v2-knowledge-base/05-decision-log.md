@@ -134,6 +134,7 @@
 | F-064 | 首次生产观察40个目标全部在Provider调用前失败：每目标3次`network_error`，共120条不可变失败尝试，成功回答0、Token 0。独立检查确认`aliyun_answertravel Internal=true`且Worker仅挂该网络时访问DeepSeek返回`EAI_AGAIN`；同镜像经`answertravel_proxy`返回HTTP 401。`internal=true`是保护PostgreSQL/Redis的既定安全设计，不应放开整个网络；修复为Worker双网连接，数据服务继续仅在内部网络 | 2026-09-17 |
 | F-065 | 阿里云生产Compose已完成Worker双网修复：Worker同时连接内部`aliyun_answertravel`与非内部`answertravel_proxy`，重建后状态`running`、重启次数0，访问DeepSeek入口返回HTTP 401；PostgreSQL、Redis继续仅在内部网络，API固定代理IP未变。原40个任务未自动重试，120条`network_error`失败证据保持不可变，回答与Token仍为0 | 2026-09-17 |
 | F-066 | 用户明确授权网络故障恢复补采：使用同一20条批准问题×2轮建立独立恢复计划，最多40个DeepSeek API请求，每目标仅1次，Token上限60,000。恢复前必须验证原计划40目标、120条`network_error`、0回答、0 Token和空待处理队列；原失败证据不得删除，授权不包含周期监测、竞品直问或发布 | 2026-09-17 |
+| F-067 | 网络故障恢复计划生产dry-run通过：原失败计划`e72876fe-076c-489a-9a66-82b2c2855982`保持120条`network_error`、0回答、0 Token；固定恢复计划`8cb46184-c355-4a36-b744-ac00f9148dec`包含40个新幂等目标、每目标仅1次、Token上限60,000，队列待处理任务0，未写数据库、未入队、未调用DeepSeek | 2026-09-17 |
 
 ## Phase 1 内部实现选择
 

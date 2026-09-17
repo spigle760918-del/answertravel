@@ -72,3 +72,11 @@
 - 根因已独立复现：`aliyun_answertravel`为刻意设置的内部网络，Worker仅连接该网络时DNS请求返回`EAI_AGAIN`；相同镜像连接`answertravel_proxy`访问DeepSeek入口返回HTTP 401，证明公网路径可达；
 - 修复方案是Worker同时连接内部数据网络和非内部代理网络，不把`aliyun_answertravel`改为外部网络，不让PostgreSQL或Redis获得公网出站；
 - 失败计划与120条尝试保持不可变，不能删除或伪装为未执行。网络修复后是否创建恢复计划需单独遵循失败补采门禁。
+
+## Worker 出站修复结果
+
+- 生产Compose已将Worker同时连接`aliyun_answertravel`与`answertravel_proxy`；
+- Worker重建后为`running`、重启次数0，不发布宿主机端口；
+- Worker访问DeepSeek入口返回HTTP 401，证明DNS、TLS和公网路径已经可达；
+- API、PostgreSQL、Redis及内部网络配置未改变；
+- 原失败任务未重新执行，成功回答和Token仍为0。

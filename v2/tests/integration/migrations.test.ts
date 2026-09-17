@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -17,13 +17,32 @@ describe.runIf(Boolean(adminUrl))("real PostgreSQL migrations", () => {
     try {
       await admin.query(`create schema ${pg.escapeIdentifier(schema)}`);
       const first = join(directory, "0001_probe.sql");
-      const sql = "create table migration_probe (id integer primary key);";
-      await writeFile(first, sql);
+      const sql = "create table migration_probe (id integer primary key);\n";
+      const crlfSql = sql.replace(/\n/g, "\r\n");
+      const lfChecksum = createHash("sha256").update(sql, "utf8").digest("hex");
+      const crlfChecksum = createHash("sha256").update(crlfSql, "utf8").digest("hex");
+      await writeFile(first, crlfSql);
       expect(await runMigrations(pool, directory)).toEqual(["0001_probe.sql"]);
-      expect(await runMigrations(pool, directory)).toEqual([]);
-      await writeFile(first, `${sql}\n-- changed fixture`);
-      await expect(runMigrations(pool, directory)).rejects.toThrow("Applied migration was modified");
+      const stored = (await pool.query<{ checksum: string }>(
+        "select checksum from schema_migrations where version = '0001_probe.sql'"
+      )).rows[0];
+      expect(stored).toBeDefined();
+      expect(stored?.checksum).toBe(lfChecksum);
+      await pool.query(
+        "update schema_migrations set checksum = $1 where version = '0001_probe.sql'",
+        [crlfChecksum]
+      );
       await writeFile(first, sql);
+      expect(await runMigrations(pool, directory)).toEqual([]);
+      await pool.query(
+        "update schema_migrations set checksum = $1 where version = '0001_probe.sql'",
+        [lfChecksum]
+      );
+      await writeFile(first, crlfSql);
+      expect(await runMigrations(pool, directory)).toEqual([]);
+      await writeFile(first, `${sql}-- changed fixture\n`);
+      await expect(runMigrations(pool, directory)).rejects.toThrow("Applied migration was modified");
+      await writeFile(first, crlfSql);
       await writeFile(join(directory, "0002_failure.sql"), "create table rollback_probe(id integer); select missing_fixture_function();");
       await expect(runMigrations(pool, directory)).rejects.toThrow(/does not exist/);
       expect((await pool.query("select to_regclass('rollback_probe') as table_name")).rows[0].table_name).toBeNull();

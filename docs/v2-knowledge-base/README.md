@@ -64,7 +64,8 @@
 | `44-website-technical-access-preflight-intent-card.md` | 北京珈程官网技术接入只读预检 | 已确认官网位于独立主机，待取得实际托管主机只读权限 |
 | `45-platform-customer-boundary-adr.md` | AnswerTravel 平台、租户与客户资产边界 | 已确认，代码修正尚未开始 |
 | `46-customer-hardcoding-and-ui-audit.md` | 客户硬编码、界面栏目与外部原型影响审计 | 审计完成，待确认修复计划 |
-| `47-geoflow-aligned-product-ui-intent-card.md` | GEOFlow 对标的多客户产品界面重设计范围与确认门禁 | Gate A 设计中，禁止施工 |
+| `47-geoflow-aligned-product-ui-intent-card.md` | GEOFlow 对标的多客户产品界面重设计范围与确认门禁 | Gate A 已确认，按原始源码制作 Gate B 预览 |
+| `48-geoflow-agpl-frontend-integration-adr.md` | GEOFlow AGPL 前端与 AnswerTravel 后端的集成边界 | 已确认，待界面 Gate E |
 
 ## 事实分级
 

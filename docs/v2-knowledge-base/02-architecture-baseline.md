@@ -116,7 +116,7 @@ Web 框架、数据库访问层和队列库在 Phase 1 技术 Spike 后固定，
 
 ## 9. 外部项目在架构中的位置
 
-- GEOFlow：AnswerTravel 客户工作台的前端用户体验、运营信息架构、视觉布局和内容/发布工作流基准。V2 应吸收其统一侧栏、任务优先页面、数据中心、内容资产、分发和系统配置的交互范式，并改造成 AnswerTravel 自身的 GEO 监测与决策业务；AGPL 源码不复制进闭源核心。
+- GEOFlow：固定版本 `abcc638887dd35f508a59815f01ed42bc4415a09` 作为 AnswerTravel 前端展示层和运营工作台母版。前端按 AGPL-3.0-only 独立开源并保留对应源码提供义务；AnswerTravel 的 TypeScript/PostgreSQL/Redis 业务后端继续作为独立服务，通过版本化 API 接入，不再自行重新设计 GEOFlow 公共壳层和一级信息架构。
 - yao-geo-skills：问题拓展、全景诊断、监测、品牌知识、页面与内容产物的契约和评测参考。
 - geo-citation-lab：引用选择/吸收、跨模型/终端和页面特征研究基线。
 - yao-open-prompts：Prompt 候选素材；进入生产前必须版本化和评测。

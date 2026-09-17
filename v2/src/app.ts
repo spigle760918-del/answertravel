@@ -31,6 +31,9 @@ export function buildApp(config: AppConfig): FastifyInstance {
         ...(config.PUBLIC_HTTPS_EVIDENCE
           ? { publicHttps: config.PUBLIC_HTTPS_EVIDENCE }
           : {}),
+        ...(config.CLOUD_BACKUP_RESTORE_EVIDENCE
+          ? { cloudBackupRestore: config.CLOUD_BACKUP_RESTORE_EVIDENCE }
+          : {}),
       }).overview(config.ACCEPTANCE_TENANT_ID);
     }
     catch (error) {

@@ -76,11 +76,12 @@ describe.runIf(Boolean(databaseUrl && adminUrl && redisUrl))("acceptance console
     } finally { await app.close(); }
   });
 
-  it("marks cloud runtime and HTTPS ready only when current-instance evidence is configured", async () => {
+  it("marks cloud runtime, HTTPS, and backup restore ready only when current-instance evidence is configured", async () => {
     const app = buildApp({
       ...config(tenantA),
       ALIYUN_RUNTIME_EVIDENCE: "阿里云容器运行证据",
       PUBLIC_HTTPS_EVIDENCE: "公网 HTTPS 验收证据",
+      CLOUD_BACKUP_RESTORE_EVIDENCE: "生产备份与隔离恢复演练证据",
     });
     try {
       const response = await app.inject({ url: "/api/acceptance/overview" });
@@ -91,6 +92,7 @@ describe.runIf(Boolean(databaseUrl && adminUrl && redisUrl))("acceptance console
         expect.arrayContaining([
           expect.objectContaining({ key: "aliyun_native", status: "ready", evidence: "阿里云容器运行证据" }),
           expect.objectContaining({ key: "https_domain", status: "ready", evidence: "公网 HTTPS 验收证据" }),
+          expect.objectContaining({ key: "cloud_backup", status: "ready", evidence: "生产备份与隔离恢复演练证据" }),
         ]),
       );
     } finally { await app.close(); }

@@ -103,9 +103,10 @@ docker compose \
 ```text
 ALIYUN_RUNTIME_EVIDENCE=当前实例的 PostgreSQL、Redis、API、Worker 运行验收摘要
 PUBLIC_HTTPS_EVIDENCE=当前实例公网首页、验收接口和就绪接口的 HTTPS 验收摘要
+CLOUD_BACKUP_RESTORE_EVIDENCE=当前实例备份校验与隔离恢复演练摘要
 ```
 
-两项未配置时，验收台分别保持 `blocked` 和 `pending`。更换服务器时不得复制旧实例的通过状态；必须重新核验后填写。证据字段不得包含密码、API Key、Cookie 或数据库连接串。
+三项未配置时，验收台分别保持 `blocked`、`pending` 和 `pending`。更换服务器时不得复制旧实例的通过状态；必须重新核验后填写。证据字段不得包含密码、API Key、Cookie 或数据库连接串。
 
 ## 回滚
 

@@ -180,7 +180,24 @@ export type AcceptanceOverview = {
 export type DeploymentReadinessEvidence = {
   aliyunRuntime?: string;
   publicHttps?: string;
+  cloudBackupRestore?: string;
 };
+
+export function buildPrimaryAcceptanceLimitation(input: {
+  isRealBrand: boolean;
+  panelStatus: string;
+  approvedQuestionCount: number;
+  observationPlanCount: number;
+  successfulAnswerCount: number;
+}): string {
+  if (!input.isRealBrand)
+    return "当前为验收测试数据，不代表真实品牌运营结果";
+  if (input.panelStatus !== "approved")
+    return "当前为真实品牌问题草案，尚未批准问题组或采集任何答案";
+  if (input.observationPlanCount === 0 && input.successfulAnswerCount === 0)
+    return `当前真实品牌问题组已批准，共 ${input.approvedQuestionCount} 条；尚未创建观察计划或采集任何答案`;
+  return `当前真实品牌问题组已批准，共 ${input.approvedQuestionCount} 条；已创建 ${input.observationPlanCount} 个观察计划并采集 ${input.successfulAnswerCount} 条成功回答，失败尝试继续作为不可变证据保留`;
+}
 
 export class AcceptanceConsoleRepository {
   constructor(
@@ -287,7 +304,7 @@ export class AcceptanceConsoleRepository {
         { key:"linux_ci",label:"GitHub Linux CI",status:"ready",evidence:"工作台实现提交 2638118 的 Linux CI 34937879517 已成功",requiredForLaunch:true },
         { key:"aliyun_native",label:"阿里云原生运行验证",status:this.deploymentEvidence.aliyunRuntime ? "ready" : "blocked",evidence:this.deploymentEvidence.aliyunRuntime ?? "blocked-by-host-policy：尚无当前实例的阿里云运行证据，未冒充通过",requiredForLaunch:true },
         { key:"https_domain",label:"域名与 HTTPS 预发布",status:this.deploymentEvidence.publicHttps ? "ready" : "pending",evidence:this.deploymentEvidence.publicHttps ?? "尚无当前实例的公网 HTTPS 验收证据",requiredForLaunch:true },
-        { key:"cloud_backup",label:"云端备份与恢复",status:"pending",evidence:"本地恢复已通过，云端备份与恢复尚未验收",requiredForLaunch:true },
+        { key:"cloud_backup",label:"云端备份与恢复",status:this.deploymentEvidence.cloudBackupRestore ? "ready" : "pending",evidence:this.deploymentEvidence.cloudBackupRestore ?? "尚无当前实例的云端备份与隔离恢复演练证据",requiredForLaunch:true },
         { key:"cloud_logs_alerts",label:"云端日志与最小告警",status:"pending",evidence:"尚未完成云端告警验收",requiredForLaunch:true },
         { key:"multi_model",label:"多模型并行监控",status:"not_in_alpha",evidence:"属于后续版本，本次仅 DeepSeek API",requiredForLaunch:false },
         { key:"multi_account_publish",label:"多平台多账号发布",status:"not_in_alpha",evidence:"属于后续版本，Alpha 不自动对外发布",requiredForLaunch:false },
@@ -464,11 +481,13 @@ export class AcceptanceConsoleRepository {
           truthDraft: { status: "draft", publicCandidateCount: onboardingRow.package.facts.filter((item:any)=>item.visibility === "public" && item.confidence === "high").length, excludedCount: onboardingRow.package.facts.filter((item:any)=>item.visibility !== "public" || item.confidence !== "high").length, note: "仅公开且达到当前证据门槛的候选事实进入草案；受限、自述、存疑和内部规则仍被排除，尚未批准。" },
         } : null,
         limitations: [
-          isRealBrandDraft
-            ? p.status === "approved"
-              ? `当前真实品牌问题组已批准，共 ${(p.candidates as any[]).filter((item:any)=>item.included).length} 条；尚未创建观察计划或采集任何答案`
-              : "当前为真实品牌问题草案，尚未批准问题组或采集任何答案"
-            : "当前为验收测试数据，不代表真实品牌运营结果",
+          buildPrimaryAcceptanceLimitation({
+            isRealBrand: isRealBrandDraft,
+            panelStatus: p.status,
+            approvedQuestionCount: (p.candidates as any[]).filter((item:any)=>item.included).length,
+            observationPlanCount: plans.rows.length,
+            successfulAnswerCount: answers.rows.length,
+          }),
           "当前仅验证 DeepSeek API，不代表 DeepSeek Web/App 搜索表现",
           "当前仅提供基础提及、条件化排名和规则型主张情感，不代表完整 GEO 决策或趋势",
           "引用候选与页面快照不等于内容被模型吸收或产生因果影响",

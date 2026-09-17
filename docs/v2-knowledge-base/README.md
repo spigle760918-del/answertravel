@@ -57,7 +57,7 @@
 | `37-isolated-cloud-predeploy-intent-card.md` | 阿里云隔离预发布准备 | Gate A-F 已通过并封版 |
 | `38-cloud-resource-risk-decision-intent-card.md` | 阿里云资源风险与原生运行决策 | Gate A-D 已完成，Gate E 待确认 |
 | `39-production-acceptance-intent-card.md` | 阿里云生产实例验收状态 | Gate A-F 已完成并封版 |
-| `40-cloud-backup-restore-intent-card.md` | 阿里云生产备份与隔离恢复演练 | Gate A-D 实施中 |
+| `40-cloud-backup-restore-intent-card.md` | 阿里云生产备份与隔离恢复演练 | Gate A-F 已完成并封版 |
 
 ## 事实分级
 

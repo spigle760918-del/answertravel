@@ -1,6 +1,6 @@
 # 意图卡：阿里云生产备份与隔离恢复演练 V1
 
-状态：Gate A-D 实施中
+状态：Gate A-F 已完成并封版
 日期：2026-09-16
 
 ## 用户价值
@@ -32,3 +32,13 @@
 - Redis恢复后的DB2键数量与生产一致；
 - 输出`BACKUP_RESTORE_GATE=PASS`；
 - 生产API与Worker仍保持运行，且未发生DeepSeek调用。
+
+## 验收结果
+
+- 备份目录：`/www/backup/answertravel-v2/20260917T080638`；
+- PostgreSQL备份SHA-256：`99fa961804dd0945e04d337bd855e69af5274380bae62c738271015f2aa0c421`；
+- Redis备份SHA-256：`58ec01d8513f27f36017f1bea7a12d1e3a3fe92e4356d5dc527df9354bbe8268`；
+- PostgreSQL生产与恢复计数一致：tenants 1、brand_truth_cards 2、question_panels 2、observation_plans 0、raw_answers 0、monitoring_schedules 0；
+- Redis DB2生产与恢复均为10个键；
+- 输出`BACKUP_RESTORE_GATE=PASS`，临时恢复容器和卷已清理，生产数据卷未修改；
+- 本次未调用DeepSeek，API与Worker未因演练停止。

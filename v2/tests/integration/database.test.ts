@@ -7,6 +7,8 @@ import { withTenantTransaction } from "../../src/platform/database.js";
 import { testDatabaseUrl } from "../support/environment.js";
 import { appendAuditEvent } from "../../src/platform/audit.js";
 import { createAuditEvent } from "../../src/kernel/audit-event.js";
+import { WebsiteRemediationBlueprintRepository } from "../../src/modules/website-remediation/website-remediation-blueprint-repository.js";
+import { WebsiteRemediationBlueprintService } from "../../src/modules/website-remediation/website-remediation-blueprint-service.js";
 
 const databaseUrl = testDatabaseUrl();
 const adminUrl = testDatabaseUrl("TEST_ADMIN_DATABASE_URL");
@@ -95,6 +97,26 @@ integration("PostgreSQL evidence guarantees", () => {
     await repository.append(envelope);
     await expect(repository.append({ ...envelope, source: { ...envelope.source, model: "different-model" } })).rejects.toThrow("collection context");
     expect((await repository.findById(tenantA, envelope.id))!.source).toEqual(envelope.source);
+  });
+
+  it("persists a versioned website remediation blueprint and returns it idempotently", async () => {
+    const diagnosisId = randomUUID();
+    const page = (key: string) => ({
+      key, label: key, url: `https://www.jiacheng666.com/${key}`,
+      status: "succeeded", httpStatus: 200, title: key,
+      contentSha256: "a".repeat(64), errorCode: null, textExcerpt: "",
+      documentSignals: { metaDescription: null, canonicalUrl: null, robots: null, h1Count: 0, h2Count: 1, jsonLdTypes: [], imageCount: 2, missingAltCount: 1, internalLinkCount: 3 }
+    });
+    const pages = [page("home"), page("about"), page("product"), page("questions"), page("terms")];
+    await admin.query(`insert into website_diagnosis_snapshots(id,tenant_id,rules_version,input_sha256,status,fact_level,target_count,succeeded_count,blocked_count,failed_count,pages,strengths,gaps,self_reported_claims,decision_signals,publication_authorized,created_at) values($1,$2,'website-diagnosis.v1',$3,'complete_with_gaps','F2',5,5,0,0,$4::jsonb,'[]'::jsonb,$5::jsonb,'[]'::jsonb,'[]'::jsonb,false,now())`, [diagnosisId, tenantA, "b".repeat(64), JSON.stringify(pages), JSON.stringify(["JSON-LD", "meta", "canonical", "H1", "alt"])]);
+    const service = new WebsiteRemediationBlueprintService(new WebsiteRemediationBlueprintRepository(pool));
+    const first = await service.create(tenantA);
+    const duplicate = await service.create(tenantA);
+    expect(first.idempotent).toBe(false);
+    expect(first.blueprint.rulesVersion).toBe("website-remediation-blueprint.v1");
+    expect(duplicate.idempotent).toBe(true);
+    expect(duplicate.blueprint.id).toBe(first.blueprint.id);
+    await expect(withTenantTransaction(pool, tenantA, client => client.query("update website_remediation_blueprints set status='draft' where id=$1", [first.blueprint.id]))).rejects.toThrow("append-only");
   });
 
   it("rejects cross-tenant audit writes and hides tenant metadata", async () => {

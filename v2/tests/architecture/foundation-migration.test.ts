@@ -141,5 +141,9 @@ describe("foundation migration guardrails", () => {
     expect(sql).toContain("publication_authorized=false");
     expect(sql).toContain("force row level security");
     expect(sql).toContain("website_remediation_blueprints_tenant_isolation");
+    const versionSql = await readFile(resolve(process.cwd(), "migrations/0024_website_remediation_blueprint_version.sql"), "utf8");
+    expect(versionSql).toContain("add column rules_version");
+    expect(versionSql).toContain("website-remediation-blueprint.v1");
+    expect(versionSql).toContain("drop default");
   });
 });

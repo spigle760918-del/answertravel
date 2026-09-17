@@ -58,6 +58,7 @@
 | `38-cloud-resource-risk-decision-intent-card.md` | 阿里云资源风险与原生运行决策 | Gate A-D 已完成，Gate E 待确认 |
 | `39-production-acceptance-intent-card.md` | 阿里云生产实例验收状态 | Gate A-F 已完成并封版 |
 | `40-cloud-backup-restore-intent-card.md` | 阿里云生产备份与隔离恢复演练 | Gate A-F 已完成并封版 |
+| `41-production-first-observation-intent-card.md` | 北京珈程生产首次真实观察执行门禁 | Gate A-D 本地完成，生产预演待部署 |
 
 ## 事实分级
 

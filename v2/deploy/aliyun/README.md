@@ -19,6 +19,8 @@
 - `dist/src/main.js`：API；
 - `dist/src/worker.js`：Worker；
 - `dist/scripts/migrate.js`：迁移入口；
+- `dist/scripts/initialize-jiacheng-production.js`：北京珈程生产事实初始化；
+- `dist/scripts/create-jiacheng-production-baseline.js`：首次真实观察预演与受控入队；
 - `web-dist/`：Web 静态文件。
 
 服务器运行阶段安装锁文件中的生产依赖，API 与 Worker 分别使用 `npm run start:api:prod` 和 `npm run start:worker:prod`，不依赖 `tsx`。
@@ -74,6 +76,22 @@ publicationAuthorized=false
 ```
 
 输出的 `tenantId` 用于服务器 `ACCEPTANCE_TENANT_ID`，不是密钥。在品牌数据和预算边界未复核前，Worker 应保持停止。
+
+## 北京珈程首次真实观察门禁
+
+真实观察入口默认只做预演，不写数据库、不入队、不调用 DeepSeek：
+
+```bash
+docker compose \
+  --env-file .env.production \
+  -f compose.production.yml \
+  run --rm --no-deps api \
+  node dist/scripts/create-jiacheng-production-baseline.js
+```
+
+预演必须确认：生产租户正确、最新问题组为已批准的固定20条、观察计划/回答/周期计划和无关待处理任务均不存在，输出`mode=dry-run`、`plannedSamples=40`、`maxTotalTokens=60000`、`deepseekCalled=false`。
+
+真实执行需要同时使用`--execute`和固定授权标记；缺少任一项都会停止。只有用户再次明确批准“20条问题×2轮、最多40次DeepSeek API调用、计划Token上限60,000”后才可执行。该授权不包含周期监测、竞品直问、内容生成或发布。
 
 ## 当前实例部署证据
 

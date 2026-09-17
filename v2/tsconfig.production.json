@@ -10,7 +10,8 @@
   "include": [
     "src/**/*.ts",
     "scripts/migrate.ts",
-    "scripts/initialize-jiacheng-production.ts"
+    "scripts/initialize-jiacheng-production.ts",
+    "scripts/create-jiacheng-production-baseline.ts"
   ],
   "exclude": ["tests", "web", ".runtime", "web-dist", "dist"]
 }

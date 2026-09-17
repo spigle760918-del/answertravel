@@ -61,7 +61,7 @@
 | `41-production-first-observation-intent-card.md` | 北京珈程生产首次真实观察执行门禁 | Gate A-F 已通过并封版 |
 | `42-production-website-diagnosis-intent-card.md` | 北京珈程生产官网只读诊断 | Gate A-F 已通过并封版 |
 | `43-production-website-remediation-blueprint-intent-card.md` | 北京珈程官网结构修复蓝图 | Gate A-F 已通过并封版 |
-| `44-website-technical-access-preflight-intent-card.md` | 北京珈程官网技术接入只读预检 | Gate A 已确认，待服务器只读核查 |
+| `44-website-technical-access-preflight-intent-card.md` | 北京珈程官网技术接入只读预检 | 已确认官网位于独立主机，待取得实际托管主机只读权限 |
 
 ## 事实分级
 

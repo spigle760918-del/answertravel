@@ -60,7 +60,7 @@
 | `40-cloud-backup-restore-intent-card.md` | 阿里云生产备份与隔离恢复演练 | Gate A-F 已完成并封版 |
 | `41-production-first-observation-intent-card.md` | 北京珈程生产首次真实观察执行门禁 | Gate A-F 已通过并封版 |
 | `42-production-website-diagnosis-intent-card.md` | 北京珈程生产官网只读诊断 | Gate A-F 已通过并封版 |
-| `43-production-website-remediation-blueprint-intent-card.md` | 北京珈程官网结构修复蓝图 | Gate A 待确认 |
+| `43-production-website-remediation-blueprint-intent-card.md` | 北京珈程官网结构修复蓝图 | Gate A-D 本地通过，待生产部署与 Gate E |
 
 ## 事实分级
 

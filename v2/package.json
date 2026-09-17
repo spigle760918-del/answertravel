@@ -39,7 +39,8 @@
     "production:init:jiacheng": "node dist/scripts/initialize-jiacheng-production.js",
     "production:baseline:jiacheng": "node dist/scripts/create-jiacheng-production-baseline.js",
     "production:baseline:recover:jiacheng": "node dist/scripts/recover-jiacheng-production-baseline.js",
-    "production:website:diagnose:jiacheng": "node dist/scripts/diagnose-jiacheng-website.js"
+    "production:website:diagnose:jiacheng": "node dist/scripts/diagnose-jiacheng-website.js",
+    "production:website:blueprint:jiacheng": "node dist/scripts/create-jiacheng-website-remediation-blueprint.js"
   },
   "dependencies": {
     "@fastify/static": "10.1.3",

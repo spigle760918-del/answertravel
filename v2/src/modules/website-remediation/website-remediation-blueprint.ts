@@ -1,0 +1,28 @@
+import { createHash, randomUUID } from "node:crypto";
+import { z } from "zod";
+import { websiteDiagnosisSchema, type WebsiteDiagnosis } from "../website-diagnosis/website-diagnosis.js";
+
+const taskSchema=z.object({id:z.string().uuid(),key:z.string().min(1),title:z.string().min(1),pageKeys:z.array(z.string().min(1)).min(1),reason:z.string().min(1),status:z.enum(["ready_for_technical_implementation","waiting_facts"]),allowedFacts:z.array(z.string().min(1)),prohibitedClaims:z.array(z.string().min(1)).min(1),acceptanceCriteria:z.array(z.string().min(1)).min(1),rollback:z.string().min(1)});
+const batchSchema=z.object({key:z.enum(["site_template_foundation","trust_identity_structure","product_itinerary_structure"]),title:z.string().min(1),priority:z.number().int().min(1).max(3),status:z.enum(["ready_for_technical_implementation","waiting_facts"]),tasks:z.array(taskSchema).min(1)});
+export const websiteRemediationBlueprintSchema=z.object({id:z.string().uuid(),tenantId:z.string().uuid(),rulesVersion:z.literal("website-remediation-blueprint.v1"),sourceDiagnosisId:z.string().uuid(),inputSha256:z.string().regex(/^[a-f0-9]{64}$/),status:z.literal("draft"),factLevel:z.literal("F4"),batchCount:z.number().int().min(1).max(3),taskCount:z.number().int().positive(),batches:z.array(batchSchema).min(1).max(3),implementationAuthorized:z.literal(false),publicationAuthorized:z.literal(false),createdAt:z.string().datetime({offset:true})});
+export type WebsiteRemediationBlueprint=z.infer<typeof websiteRemediationBlueprintSchema>;
+
+const prohibited=["不得加入未经独立核验的销量、满意度或排名","不得把保证低价、0购物0自费或救援保障写成已核验事实","不得生成虚构评论、评分或资质等级"];
+export function createWebsiteRemediationBlueprint(tenantId:string,raw:WebsiteDiagnosis,createdAt=new Date().toISOString()):WebsiteRemediationBlueprint{
+ const diagnosis=websiteDiagnosisSchema.parse(raw);if(diagnosis.tenantId!==tenantId)throw new Error("Website diagnosis tenant mismatch.");if(!diagnosis.succeededCount)throw new Error("A successful website diagnosis is required.");
+ const pages=diagnosis.pages.filter(x=>x.status==="succeeded");const keys=(predicate:(p:typeof pages[number])=>boolean)=>pages.filter(predicate).map(x=>x.key);
+ const tasks=[] as z.infer<typeof taskSchema>[];
+ const add=(key:string,title:string,pageKeys:string[],reason:string,status:"ready_for_technical_implementation"|"waiting_facts",acceptanceCriteria:string[],rollback:string,allowedFacts:string[]=[])=>{if(pageKeys.length)tasks.push(taskSchema.parse({id:randomUUID(),key,title,pageKeys,reason,status,allowedFacts,prohibitedClaims:prohibited,acceptanceCriteria,rollback}));};
+ add("meta_description","补齐页面摘要",keys(p=>!p.documentSignals?.metaDescription),"搜索与AI读取页面主题时缺少稳定摘要。","ready_for_technical_implementation",["目标页面均存在唯一且与正文一致的meta description","摘要不含未经核验的销量、满意度或承诺"],"恢复修改前模板或页面head片段");
+ add("canonical","补齐规范链接",keys(p=>!p.documentSignals?.canonicalUrl),"页面未声明规范URL，可能造成同内容地址含义不清。","ready_for_technical_implementation",["每个目标页面输出唯一、自引用的HTTPS canonical","canonical返回HTTP 200且不跨域"],"删除新增canonical并恢复原head模板");
+ add("h1","补齐主标题层级",keys(p=>(p.documentSignals?.h1Count??0)===0),"页面缺少可识别的主标题。","ready_for_technical_implementation",["每个目标页面恰有一个与页面主题一致的H1","不改变原有业务事实"],"恢复修改前标题模板");
+ add("image_alt","补齐信息图片替代文本",keys(p=>(p.documentSignals?.missingAltCount??0)>0),"信息图片缺少非空alt文本。","ready_for_technical_implementation",["信息图片alt描述实际内容","装饰图片使用空alt而不是堆砌关键词"],"恢复修改前图片属性");
+ const structuredKeys=keys(p=>(p.documentSignals?.jsonLdTypes.length??0)===0);
+ const foundationTasks=tasks.filter(x=>["meta_description","canonical","h1","image_alt"].includes(x.key));
+ const batches:z.infer<typeof batchSchema>[]=[];
+ if(foundationTasks.length)batches.push(batchSchema.parse({key:"site_template_foundation",title:"全站模板基础",priority:1,status:"ready_for_technical_implementation",tasks:foundationTasks}));
+ const trustPages=structuredKeys.filter(x=>x==="home"||x==="about"||x==="terms");if(trustPages.length)batches.push(batchSchema.parse({key:"trust_identity_structure",title:"主体与资质机器可读结构",priority:2,status:"ready_for_technical_implementation",tasks:[taskSchema.parse({id:randomUUID(),key:"trust_json_ld",title:"设计TravelAgency主体结构化数据",pageKeys:trustPages,reason:"目标页面未发现JSON-LD，但已存在公司全称、许可证、统一社会信用代码和备案等页面信号。",status:"ready_for_technical_implementation",allowedFacts:["北京珈程国际旅行社有限公司","旅行社业务经营许可证 L-BJ10127","统一社会信用代码 91110112MAE7E8FC0K","京ICP备2025121278号-1"],prohibitedClaims:prohibited,acceptanceCriteria:["仅使用已批准主体事实","结构化数据与页面可见内容一致","通过Schema语法校验且不包含评分或评论"],rollback:"删除新增JSON-LD脚本并恢复原模板"})]}));
+ const productPages=structuredKeys.filter(x=>x==="product"||x==="questions");if(productPages.length)batches.push(batchSchema.parse({key:"product_itinerary_structure",title:"产品与行程事实结构",priority:3,status:"waiting_facts",tasks:[taskSchema.parse({id:randomUUID(),key:"product_json_ld",title:"等待当前产品事实后设计产品结构",pageKeys:productPages,reason:"产品与问答页面缺少机器可读结构，但价格有效期、费用边界和当前行程版本仍需品牌确认。",status:"waiting_facts",allowedFacts:["现有页面可读取的产品编号、价格状态和行程时长仅作为待复核输入"],prohibitedClaims:prohibited,acceptanceCriteria:["先确认价格有效期、费用包含/不含和行程版本","结构化字段与页面可见事实一致","不使用销量、满意度或保证低价自述"],rollback:"未获事实确认前不实施；实施后可删除对应JSON-LD脚本"})]}));
+ const inputSha256=createHash("sha256").update(JSON.stringify({diagnosisId:diagnosis.id,inputSha256:diagnosis.inputSha256,pages:pages.map(p=>({key:p.key,hash:p.contentSha256,signals:p.documentSignals})),gaps:diagnosis.gaps})).digest("hex");
+ return websiteRemediationBlueprintSchema.parse({id:randomUUID(),tenantId,rulesVersion:"website-remediation-blueprint.v1",sourceDiagnosisId:diagnosis.id,inputSha256,status:"draft",factLevel:"F4",batchCount:batches.length,taskCount:batches.reduce((n,b)=>n+b.tasks.length,0),batches,implementationAuthorized:false,publicationAuthorized:false,createdAt});
+}

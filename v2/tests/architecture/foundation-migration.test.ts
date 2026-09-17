@@ -133,4 +133,13 @@ describe("foundation migration guardrails", () => {
     expect(sql).toContain("force row level security");
     expect(sql).toContain("website_diagnosis_snapshots_tenant_isolation");
   });
+  it("keeps website remediation blueprints immutable and blocks implementation or publication", async () => {
+    const sql = await readFile(resolve(process.cwd(), "migrations/0023_website_remediation_blueprint.sql"), "utf8");
+    expect(sql).toContain("website_remediation_blueprints_append_only");
+    expect(sql).toContain("website_remediation_blueprints_no_truncate");
+    expect(sql).toContain("implementation_authorized=false");
+    expect(sql).toContain("publication_authorized=false");
+    expect(sql).toContain("force row level security");
+    expect(sql).toContain("website_remediation_blueprints_tenant_isolation");
+  });
 });

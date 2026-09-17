@@ -4,10 +4,15 @@ import { JIACHENG_APPROVED_QUESTIONS } from "../../src/modules/question-intellig
 import { questionPanelSchema } from "../../src/modules/question-intelligence/question-intelligence.js";
 import {
   assertProductionBaselineAuthorization,
+  assertProductionRecoveryAuthorization,
   createJiachengProductionBaseline,
+  createJiachengProductionNetworkRecovery,
   JIACHENG_PRODUCTION_AUTHORIZATION,
   JIACHENG_PRODUCTION_BASELINE_CYCLE,
   JIACHENG_PRODUCTION_BASELINE_PLAN_ID,
+  JIACHENG_PRODUCTION_RECOVERY_AUTHORIZATION,
+  JIACHENG_PRODUCTION_RECOVERY_CYCLE,
+  JIACHENG_PRODUCTION_RECOVERY_PLAN_ID,
   JIACHENG_PRODUCTION_TENANT_ID,
 } from "../../src/modules/observation/production-baseline.js";
 
@@ -78,6 +83,39 @@ describe("production observation baseline gate", () => {
       assertProductionBaselineAuthorization({
         execute: true,
         authorization: JIACHENG_PRODUCTION_AUTHORIZATION,
+      }),
+    ).not.toThrow();
+  });
+
+  it("creates a separate one-attempt network recovery plan", () => {
+    const result = createJiachengProductionNetworkRecovery({
+      panel: approvedPanel(),
+      createdAt: "2026-09-17T03:00:00.000Z",
+    });
+    expect(result.plan).toMatchObject({
+      id: JIACHENG_PRODUCTION_RECOVERY_PLAN_ID,
+      cycleKey: JIACHENG_PRODUCTION_RECOVERY_CYCLE,
+      plannedSamples: 40,
+      rules: { rounds: 2, maxAttempts: 1, maxTotalTokens: 60_000 },
+    });
+    expect(result.targets).toHaveLength(40);
+    const baseline = createJiachengProductionBaseline({
+      panel: approvedPanel(),
+      createdAt: "2026-09-17T03:00:00.000Z",
+    });
+    expect(result.targets.map((target) => target.idempotencyKey)).not.toEqual(
+      baseline.targets.map((target) => target.idempotencyKey),
+    );
+  });
+
+  it("requires the exact recovery authorization marker", () => {
+    expect(() =>
+      assertProductionRecoveryAuthorization({ execute: true, authorization: "yes" }),
+    ).toThrow("exact authorization marker");
+    expect(() =>
+      assertProductionRecoveryAuthorization({
+        execute: true,
+        authorization: JIACHENG_PRODUCTION_RECOVERY_AUTHORIZATION,
       }),
     ).not.toThrow();
   });

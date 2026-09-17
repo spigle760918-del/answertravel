@@ -133,6 +133,7 @@
 | F-063 | 用户明确回复`YES，授权北京珈程生产首次真实观察：最多40次DeepSeek API调用，60000 Token上限`。授权仅覆盖固定20条已批准问题×2轮的单次生产基线及40个幂等任务，不授权追加预算、周期监测、竞品直问、多模型、内容生成、官网修改或发布 | 2026-09-17 |
 | F-064 | 首次生产观察40个目标全部在Provider调用前失败：每目标3次`network_error`，共120条不可变失败尝试，成功回答0、Token 0。独立检查确认`aliyun_answertravel Internal=true`且Worker仅挂该网络时访问DeepSeek返回`EAI_AGAIN`；同镜像经`answertravel_proxy`返回HTTP 401。`internal=true`是保护PostgreSQL/Redis的既定安全设计，不应放开整个网络；修复为Worker双网连接，数据服务继续仅在内部网络 | 2026-09-17 |
 | F-065 | 阿里云生产Compose已完成Worker双网修复：Worker同时连接内部`aliyun_answertravel`与非内部`answertravel_proxy`，重建后状态`running`、重启次数0，访问DeepSeek入口返回HTTP 401；PostgreSQL、Redis继续仅在内部网络，API固定代理IP未变。原40个任务未自动重试，120条`network_error`失败证据保持不可变，回答与Token仍为0 | 2026-09-17 |
+| F-066 | 用户明确授权网络故障恢复补采：使用同一20条批准问题×2轮建立独立恢复计划，最多40个DeepSeek API请求，每目标仅1次，Token上限60,000。恢复前必须验证原计划40目标、120条`network_error`、0回答、0 Token和空待处理队列；原失败证据不得删除，授权不包含周期监测、竞品直问或发布 | 2026-09-17 |
 
 ## Phase 1 内部实现选择
 

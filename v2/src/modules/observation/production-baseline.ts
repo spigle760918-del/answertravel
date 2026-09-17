@@ -14,6 +14,10 @@ export const JIACHENG_PRODUCTION_BASELINE_CYCLE =
   "jiacheng-production-baseline-v1";
 export const JIACHENG_PRODUCTION_AUTHORIZATION =
   "jiacheng-production-baseline-v1:40-calls:60000-tokens";
+export const JIACHENG_PRODUCTION_RECOVERY_CYCLE =
+  "jiacheng-production-baseline-network-recovery-v1";
+export const JIACHENG_PRODUCTION_RECOVERY_AUTHORIZATION =
+  "jiacheng-production-network-recovery-v1:40-calls:1-attempt:60000-tokens";
 
 export const JIACHENG_PRODUCTION_SAMPLING_RULES: SamplingRules = {
   version: "deepseek-sampling.v1",
@@ -41,6 +45,9 @@ const stableUuid = (seed: string): string => {
 export const JIACHENG_PRODUCTION_BASELINE_PLAN_ID = stableUuid(
   "answertravel-v2:production:beijing-jiacheng:observation-baseline:v1",
 );
+export const JIACHENG_PRODUCTION_RECOVERY_PLAN_ID = stableUuid(
+  "answertravel-v2:production:beijing-jiacheng:observation-baseline:network-recovery:v1",
+);
 
 export function assertProductionBaselineAuthorization(input: {
   execute: boolean;
@@ -54,11 +61,19 @@ export function assertProductionBaselineAuthorization(input: {
   }
 }
 
-export function createJiachengProductionBaseline(input: {
-  panel: QuestionPanel;
-  createdAt: string;
-}): { plan: ObservationPlan; targets: ObservationTarget[] } {
-  const { panel } = input;
+export function assertProductionRecoveryAuthorization(input: {
+  execute: boolean;
+  authorization: string | undefined;
+}): void {
+  if (!input.execute) return;
+  if (input.authorization !== JIACHENG_PRODUCTION_RECOVERY_AUTHORIZATION) {
+    throw new Error(
+      "Production recovery execution requires the exact authorization marker.",
+    );
+  }
+}
+
+function assertApprovedProductionPanel(panel: QuestionPanel): void {
   if (panel.tenantId !== JIACHENG_PRODUCTION_TENANT_ID) {
     throw new Error("Production observation tenant does not match Beijing Jiacheng.");
   }
@@ -93,6 +108,14 @@ export function createJiachengProductionBaseline(input: {
   ) {
     throw new Error("Production baseline contains an unauthorized question type.");
   }
+}
+
+export function createJiachengProductionBaseline(input: {
+  panel: QuestionPanel;
+  createdAt: string;
+}): { plan: ObservationPlan; targets: ObservationTarget[] } {
+  const { panel } = input;
+  assertApprovedProductionPanel(panel);
 
   const baseline = createObservationPlan({
     id: JIACHENG_PRODUCTION_BASELINE_PLAN_ID,
@@ -108,3 +131,21 @@ export function createJiachengProductionBaseline(input: {
   return baseline;
 }
 
+export function createJiachengProductionNetworkRecovery(input: {
+  panel: QuestionPanel;
+  createdAt: string;
+}): { plan: ObservationPlan; targets: ObservationTarget[] } {
+  assertApprovedProductionPanel(input.panel);
+  const recovery = createObservationPlan({
+    id: JIACHENG_PRODUCTION_RECOVERY_PLAN_ID,
+    panel: input.panel,
+    rules: { ...JIACHENG_PRODUCTION_SAMPLING_RULES, maxAttempts: 1 },
+    model: "deepseek-chat",
+    cycleKey: JIACHENG_PRODUCTION_RECOVERY_CYCLE,
+    createdAt: input.createdAt,
+  });
+  if (recovery.plan.plannedSamples !== 40 || recovery.targets.length !== 40) {
+    throw new Error("Production recovery must contain exactly 40 targets.");
+  }
+  return recovery;
+}

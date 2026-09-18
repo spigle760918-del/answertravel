@@ -1,12 +1,12 @@
 # GEOFlow AGPL 前端集成 ADR
 
-状态：已确认，待界面 Gate E 后施工
+状态：部分被 `49-product-scope-convergence-adr.md` 修正，待新界面 Gate E 后施工
 
 日期：2026-09-17
 
 ## 1. 决策
 
-AnswerTravel 前端以 GEOFlow 固定版本 `abcc638887dd35f508a59815f01ed42bc4415a09` 为直接母版，按 AGPL-3.0-only 方式维护和提供对应源码。AnswerTravel 已有 TypeScript、PostgreSQL、Redis、队列和证据链后端保留为独立服务，通过版本化 HTTP API 与前端通信。
+AnswerTravel 前端以 GEOFlow 固定版本 `abcc638887dd35f508a59815f01ed42bc4415a09` 的设计系统和成熟交互为母版，按 AGPL-3.0-only 方式维护实际复用和修改的对应源码。GEOFlow 的完整功能范围和原始一级栏目不再照搬。AnswerTravel 已有 TypeScript、PostgreSQL、Redis、队列和证据链后端保留为独立服务，通过版本化 HTTP API 与前端通信。
 
 ## 2. 被否决方案
 
@@ -21,7 +21,7 @@ AGPL 前端层包括：
 
 - GEOFlow 公共侧栏、顶栏、账户区和响应式壳层；
 - 页面标题、局部导航、指标、筛选、表格、表单、详情、状态、弹窗和 Toast；
-- AI 工作台、数据中心、任务、内容、资产、分发、AI配置器和网站设置页面；
+- AI 工作台，以及围绕观察、证据、诊断、决策、行动、复测和品牌真相形成的客户页面；
 - 为接入 AnswerTravel API 所做的前端修改与适配代码。
 
 该层必须保留许可证、版权与源码获取入口，构建和部署产物可追溯至固定上游版本及本地修改记录。

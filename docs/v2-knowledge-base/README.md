@@ -66,6 +66,7 @@
 | `46-customer-hardcoding-and-ui-audit.md` | 客户硬编码、界面栏目与外部原型影响审计 | 审计完成，待确认修复计划 |
 | `47-geoflow-aligned-product-ui-intent-card.md` | GEOFlow 对标的多客户产品界面重设计范围与确认门禁 | Gate A 已确认，按原始源码制作 Gate B 预览 |
 | `48-geoflow-agpl-frontend-integration-adr.md` | GEOFlow AGPL 前端与 AnswerTravel 后端的集成边界 | 已确认，待界面 Gate E |
+| `49-product-scope-convergence-adr.md` | AnswerTravel 产品范围收敛与 GEOFlow 设计复用边界 | 已确认，进入新界面 Gate B |
 
 ## 事实分级
 

@@ -146,4 +146,10 @@ describe("foundation migration guardrails", () => {
     expect(versionSql).toContain("website-remediation-blueprint.v1");
     expect(versionSql).toContain("drop default");
   });
+  it("copies shared API contracts into the production image build context", async () => {
+    const dockerfile=await readFile(resolve(process.cwd(),"deploy/aliyun/Dockerfile"),"utf8");
+    expect(dockerfile).toContain("COPY contracts ./contracts");
+    expect(dockerfile).toContain("npm run build:web");
+    expect(dockerfile).toContain("npm run build:server");
+  });
 });

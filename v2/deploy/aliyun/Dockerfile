@@ -2,6 +2,7 @@ FROM node:24.21.0-bookworm-slim AS build
 WORKDIR /app
 COPY package.json package-lock.json tsconfig.json tsconfig.production.json ./
 COPY web ./web
+COPY contracts ./contracts
 COPY src ./src
 COPY scripts ./scripts
 COPY migrations ./migrations

@@ -13,6 +13,11 @@ const ConfigSchema = z.object({
     .default("info"),
   DEEPSEEK_API_KEY: z.string().min(1).optional(),
   ACCEPTANCE_TENANT_ID: z.string().uuid().optional(),
+  PRODUCT_TENANT_ID: z.string().uuid().optional(),
+  PRODUCT_AUTH_MODE: z.enum(["disabled", "fixed_test", "session"]).optional(),
+  PRODUCT_SESSION_COOKIE_NAME: z.string().regex(/^[A-Za-z0-9_-]{3,64}$/).optional(),
+  PRODUCT_SESSION_TTL_HOURS: z.coerce.number().int().min(1).max(168).optional(),
+  PRODUCT_PUBLIC_ORIGIN: z.string().url().optional(),
   WEB_ROOT: z.string().min(1).optional(),
   SOURCE_FETCH_ALLOWED_DOMAINS: z.string().optional(),
   ALIYUN_RUNTIME_EVIDENCE: z.string().min(1).optional(),
@@ -25,5 +30,9 @@ export type AppConfig = z.infer<typeof ConfigSchema>;
 export function loadConfig(
   environment: NodeJS.ProcessEnv = process.env,
 ): AppConfig {
-  return ConfigSchema.parse(environment);
+  const config=ConfigSchema.parse(environment);
+  if(config.NODE_ENV==="production"&&config.PRODUCT_AUTH_MODE!=="session") throw new Error("Production product routes require PRODUCT_AUTH_MODE=session.");
+  if(config.NODE_ENV==="production"&&config.PRODUCT_TENANT_ID) throw new Error("PRODUCT_TENANT_ID is forbidden in production.");
+  if(config.NODE_ENV==="production"&&!config.PRODUCT_PUBLIC_ORIGIN) throw new Error("PRODUCT_PUBLIC_ORIGIN is required in production.");
+  return config;
 }

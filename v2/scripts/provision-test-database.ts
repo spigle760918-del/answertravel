@@ -16,6 +16,10 @@ export async function provisionTestDatabase(adminUrl: string, password: string):
     await pool.query(`create role ${pg.escapeIdentifier(role)} login nosuperuser nobypassrls nocreatedb nocreaterole password ${pg.escapeLiteral(password)}`);
     await pool.query(`grant usage on schema public to ${pg.escapeIdentifier(role)}`);
     await pool.query(`grant select on tenants to ${pg.escapeIdentifier(role)}`);
+    await pool.query(`grant select on platform_users, tenant_memberships to ${pg.escapeIdentifier(role)}`);
+    await pool.query(`grant execute on function list_user_memberships(uuid) to ${pg.escapeIdentifier(role)}`);
+    await pool.query(`grant select, insert, update on user_sessions to ${pg.escapeIdentifier(role)}`);
+    await pool.query(`grant insert, select on auth_security_events to ${pg.escapeIdentifier(role)}`);
     // Extra mutation grants exercise append-only guards; production needs SELECT/INSERT only.
     await pool.query(`grant select, insert, update, delete, truncate on brand_truth_cards to ${pg.escapeIdentifier(role)}`);
     await pool.query(`grant select, insert, update, delete, truncate on brand_truth_quality_reports to ${pg.escapeIdentifier(role)}`);
@@ -35,6 +39,7 @@ export async function provisionTestDatabase(adminUrl: string, password: string):
     await pool.query(`grant select, insert, update, delete, truncate on action_fact_intake_snapshots to ${pg.escapeIdentifier(role)}`);
     await pool.query(`grant select, insert, update, delete, truncate on website_diagnosis_snapshots to ${pg.escapeIdentifier(role)}`);
     await pool.query(`grant select, insert, update, delete, truncate on website_remediation_blueprints to ${pg.escapeIdentifier(role)}`);
+    await pool.query(`grant select, insert, update, delete, truncate on competitor_scope_versions, competitor_scope_entities to ${pg.escapeIdentifier(role)}`);
     // Extra mutation grants exercise database triggers; production needs SELECT/INSERT only.
     await pool.query(`grant select, insert, update, delete, truncate on evidence_artifacts, audit_events to ${pg.escapeIdentifier(role)}`);
   } finally {

@@ -1,0 +1,36 @@
+name: answertravel-v2-candidate
+
+services:
+  api-candidate:
+    image: answertravel-v2-candidate:${CANDIDATE_VERSION:?set CANDIDATE_VERSION from CANDIDATE-MANIFEST.json}
+    build:
+      context: ../..
+      dockerfile: deploy/aliyun/Dockerfile
+    restart: unless-stopped
+    env_file: .env.candidate
+    environment:
+      HOST: 0.0.0.0
+      PORT: 4288
+      DATABASE_URL: postgresql://${POSTGRES_RUNTIME_USER}:${POSTGRES_RUNTIME_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      REDIS_URL: redis://redis:6379/2
+      PRODUCT_AUTH_MODE: session
+    networks:
+      answertravel:
+        aliases: [api-candidate]
+      answertravel_proxy:
+        ipv4_address: 172.30.0.11
+    mem_limit: 512m
+    cpus: 0.75
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4288/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+
+networks:
+  answertravel:
+    external: true
+    name: aliyun_answertravel
+  answertravel_proxy:
+    external: true
+    name: answertravel_proxy

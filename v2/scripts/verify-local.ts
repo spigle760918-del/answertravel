@@ -63,6 +63,7 @@ import {
   observationJob,
 } from "../src/modules/observation/observation-queue.js";
 import { buildApp } from "../src/app.js";
+import { hashPassword } from "../src/modules/identity/password.js";
 import { withTenantTransaction } from "../src/platform/database.js";
 import {
   createFoundationQueue,
@@ -85,6 +86,7 @@ const root = resolve(".");
 const databaseOnly = process.argv.includes("--database-only");
 const deepseekSmoke = process.argv.includes("--deepseek-smoke");
 const serveAcceptance = process.argv.includes("--serve-acceptance");
+const serveProductPreview = process.argv.includes("--serve-product-preview");
 if (deepseekSmoke && !process.env.DEEPSEEK_API_KEY)
   throw new Error(
     "DEEPSEEK_API_KEY is required for the explicit real-provider smoke test.",
@@ -976,6 +978,26 @@ try {
       process.once("SIGINT", done);
       process.once("SIGTERM", done);
     });
+    await app.close();
+  }
+  if (serveProductPreview) {
+    const previewAdmin=new pg.Pool({connectionString:adminUrl});
+    const previewUserId=randomUUID();
+    const previewEmail="preview@answertravel.local";
+    const previewPassword="Preview-only-2026!";
+    try {
+      const tenant=await previewAdmin.query<{id:string}>("select id from tenants where display_name='验收品牌甲' order by created_at desc limit 1");
+      const previewTenantId=tenant.rows[0]?.id;
+      if(!previewTenantId)throw new Error("Product preview tenant fixture was not created.");
+      await previewAdmin.query(`insert into platform_users(id,email,normalized_email,password_hash,status,created_at,updated_at) values($1,$2,$2,$3,'active',now(),now())`,[previewUserId,previewEmail,await hashPassword(previewPassword)]);
+      await previewAdmin.query(`insert into tenant_memberships(user_id,tenant_id,role,status,created_at,updated_at) values($1,$2,'owner','active',now(),now())`,[previewUserId,previewTenantId]);
+    } finally { await previewAdmin.end(); }
+    const previewPort=Number(process.env.PRODUCT_PREVIEW_PORT??4274);
+    const app=buildApp({NODE_ENV:"test",HOST:"127.0.0.1",PORT:previewPort,DATABASE_URL:appUrl,REDIS_URL:redisUrl,LOG_LEVEL:"silent",PRODUCT_AUTH_MODE:"session",PRODUCT_PUBLIC_ORIGIN:"http://127.0.0.1:4276",WEB_ROOT:resolve("web-dist")});
+    await app.listen({host:"127.0.0.1",port:previewPort});
+    console.log(`PRODUCT_PREVIEW_READY http://127.0.0.1:${previewPort}/overview`);
+    console.log(`PRODUCT_PREVIEW_LOGIN ${previewEmail} / ${previewPassword}`);
+    await new Promise<void>((done)=>{process.once("SIGINT",done);process.once("SIGTERM",done)});
     await app.close();
   }
 } finally {

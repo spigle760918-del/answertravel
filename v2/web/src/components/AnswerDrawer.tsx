@@ -79,7 +79,7 @@ export function AnswerDrawer({
         </div>
         <div className="answer-text">{answer.answerText}</div>
         <section className="geo-evidence" aria-labelledby="geo-title">
-          <p className="eyebrow">品牌与竞品分析</p>
+          <p className="eyebrow">品牌与竞争对手分析</p>
           <h3 id="geo-title">提及、排名与主张证据</h3>
           {answer.geoAnalysis.status === "pending" ? (
             <p className="notice">GEO 分析尚未完成，当前不生成指标。</p>

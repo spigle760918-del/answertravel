@@ -40,13 +40,15 @@
     "production:baseline:jiacheng": "node dist/scripts/create-jiacheng-production-baseline.js",
     "production:baseline:recover:jiacheng": "node dist/scripts/recover-jiacheng-production-baseline.js",
     "production:website:diagnose:jiacheng": "node dist/scripts/diagnose-jiacheng-website.js",
-    "production:website:blueprint:jiacheng": "node dist/scripts/create-jiacheng-website-remediation-blueprint.js"
+    "production:website:blueprint:jiacheng": "node dist/scripts/create-jiacheng-website-remediation-blueprint.js",
+    "production:invite-user": "node dist/scripts/provision-invite-user.js"
   },
   "dependencies": {
     "@fastify/static": "10.1.3",
     "bullmq": "6.3.4",
     "fastify": "5.12.4",
     "ioredis": "6.0.0",
+    "lucide-react": "1.47.0",
     "pg": "8.23.0",
     "react": "19.1.1",
     "react-dom": "19.1.1",

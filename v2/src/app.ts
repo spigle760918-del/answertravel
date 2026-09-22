@@ -7,8 +7,11 @@ import fastifyStatic from "@fastify/static";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { AcceptanceConsoleRepository } from "./modules/acceptance-console/acceptance-console.js";
+import { registerProductReadRoutes } from "./modules/product-read/product-read-routes.js";
+import { registerIdentityRoutes, resolvedAuthMode } from "./modules/identity/auth-routes.js";
 
 export function buildApp(config: AppConfig): FastifyInstance {
+  if(config.NODE_ENV==="production"&&resolvedAuthMode(config)!=="session")throw new Error("Production product routes require session authentication.");
   const app = Fastify({ logger: { level: config.LOG_LEVEL } });
   const pool = createDatabasePool(config.DATABASE_URL);
   const redis = new Redis(config.REDIS_URL, { lazyConnect: true, maxRetriesPerRequest: 1, connectTimeout: 2000, commandTimeout: 3000 });
@@ -41,8 +44,19 @@ export function buildApp(config: AppConfig): FastifyInstance {
       return reply.code(503).send({ code: "acceptance_data_unavailable", message: "验收数据暂时不可用，请稍后重试。" });
     }
   });
+  app.addHook("onSend",async(request,reply,payload)=>{if(request.url.startsWith("/api/v1/")){reply.header("cache-control","no-store, private");reply.header("pragma","no-cache");reply.header("vary","Cookie");reply.header("x-content-type-options","nosniff");reply.header("referrer-policy","same-origin");}return payload;});
+  const identity=registerIdentityRoutes(app,pool,config);
+  registerProductReadRoutes(app, pool, identity.resolveTenant, config.NODE_ENV);
   const webRoot=resolve(config.WEB_ROOT??"web-dist");
   if(existsSync(webRoot)) app.register(fastifyStatic,{root:webRoot,prefix:"/"});
+
+  app.setNotFoundHandler((request, reply) => {
+    if (request.url.startsWith("/api/") || request.url.startsWith("/health/"))
+      return reply.code(404).send({ code: "route_not_found", message: "未找到该接口。" });
+    if (existsSync(webRoot) && request.headers.accept?.includes("text/html"))
+      return reply.type("text/html").sendFile("index.html");
+    return reply.code(404).send({ code: "route_not_found", message: "未找到该页面。" });
+  });
 
   app.addHook("onClose", async () => {
     redis.disconnect();

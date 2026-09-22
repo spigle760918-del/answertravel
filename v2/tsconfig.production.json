@@ -9,12 +9,14 @@
   },
   "include": [
     "src/**/*.ts",
+    "contracts/**/*.ts",
     "scripts/migrate.ts",
     "scripts/initialize-jiacheng-production.ts",
     "scripts/create-jiacheng-production-baseline.ts",
     "scripts/recover-jiacheng-production-baseline.ts",
     "scripts/diagnose-jiacheng-website.ts",
-    "scripts/create-jiacheng-website-remediation-blueprint.ts"
+    "scripts/create-jiacheng-website-remediation-blueprint.ts",
+    "scripts/provision-invite-user.ts"
   ],
   "exclude": ["tests", "web", ".runtime", "web-dist", "dist"]
 }

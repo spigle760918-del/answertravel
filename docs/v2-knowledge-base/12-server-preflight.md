@@ -42,5 +42,13 @@
 
 ## 保留证据与清理边界
 
+## 追加只读预检（2026-09-15 17:35）
+
+- Alibaba Cloud Linux 3.2104 U13.1，x86_64，内核 5.10.134-19.5.al8。
+- `MemAvailable` 约 4659 MiB，swap 1024 MiB 已全部使用；根分区 99 GiB、可用约 45 GiB。
+- 80、443、22、888、3306、41927 等端口已有监听；预发布不得占用这些端口。
+- Docker 未安装；未执行安装。
+- 以上仍是只读事实，不改变此前 `blocked-by-host-policy` 的原生验证结论。
+
 - 远端验证副本保留在 `/var/tmp/answertravel-v2-verify-ZMdC2p4B` 及 `/var/tmp/answertravel-v2-verify-native2`，仅含验证包内容和失败现场，未写入网站目录。
 - `/tmp` 中的审阅包和临时启动脚本属于本次验证产物；后续如需清理，须先再次确认精确路径，不执行宽范围删除。

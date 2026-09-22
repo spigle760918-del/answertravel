@@ -2,7 +2,7 @@
 
 状态：已启动  
 建立日期：2026-09-13  
-当前阶段：总体基线已确认，执行 7 天单品牌/DeepSeek API Alpha 计划
+当前阶段：产品壳层与只读证据闭环 V1 已完成 Gate A-F；邀请制身份与隔离上线 V1 本地 Gate A-D 完成，身份界面待 Gate E 确认
 
 ## 目的
 
@@ -64,9 +64,16 @@
 | `44-website-technical-access-preflight-intent-card.md` | 北京珈程官网技术接入只读预检 | 已确认官网位于独立主机，待取得实际托管主机只读权限 |
 | `45-platform-customer-boundary-adr.md` | AnswerTravel 平台、租户与客户资产边界 | 已确认，代码修正尚未开始 |
 | `46-customer-hardcoding-and-ui-audit.md` | 客户硬编码、界面栏目与外部原型影响审计 | 审计完成，待确认修复计划 |
-| `47-geoflow-aligned-product-ui-intent-card.md` | GEOFlow 对标的多客户产品界面重设计范围与确认门禁 | Gate A 已确认，按原始源码制作 Gate B 预览 |
-| `48-geoflow-agpl-frontend-integration-adr.md` | GEOFlow AGPL 前端与 AnswerTravel 后端的集成边界 | 已确认，待界面 Gate E |
-| `49-product-scope-convergence-adr.md` | AnswerTravel 产品范围收敛与 GEOFlow 设计复用边界 | 已确认，进入新界面 Gate B |
+| `47-geoflow-aligned-product-ui-intent-card.md` | GEOFlow 对标的多客户产品界面重设计范围与确认门禁 | 界面 Gate E 已确认，运行代码未施工 |
+| `48-geoflow-agpl-frontend-integration-adr.md` | GEOFlow AGPL 前端与 AnswerTravel 后端的集成边界 | 集成方向已确认，待实施意图卡 |
+| `49-product-scope-convergence-adr.md` | AnswerTravel 产品范围收敛与 GEOFlow 设计复用边界 | 已确认并纳入最终界面冻结 |
+| `50-final-product-ui-and-implementation-adr.md` | 最终信息架构、页面数据契约、状态与实施顺序 | 界面 Gate E 已确认，实施尚未授权 |
+| `51-product-shell-readonly-evidence-intent-card.md` | GEOFlow 产品壳层与首批只读证据闭环 | Gate A-F 已完成并封版 |
+| `52-invite-auth-isolated-launch-intent-card.md` | 邀请制身份、租户成员关系与隔离上线 | 隔离候选已生成，待服务器预演与公网候选 Gate E |
+| `53-confirmed-product-ui-restoration-intent-card.md` | 恢复已确认产品结构与游客问题分析主链 | Gate A-E 已确认，Gate F 待封版 |
+| `54-question-centered-analysis-evidence-intent-card.md` | 以游客提问为单位的 AI 可见性与引用来源聚合 | Gate A-F 已完成并封版 |
+| `55-versioned-competitor-scope-intent-card.md` | 版本化竞争范围、同口径对比与竞争对手分析边界 | Gate A-F 已完成并封版 |
+| `56-question-centered-competitor-analysis-intent-card.md` | 以游客提问为单位的同口径竞争对手分析 | Gate A-F 已通过并封版 |
 
 ## 事实分级
 
@@ -88,8 +95,10 @@ UI、API 和报告必须保留该等级，不能把 F3/F4 显示成确定事实�
 
 ## 当前一句话产品定义
 
-AnswerTravel V2 是面向文旅品牌的 AI 原生 GEO 决策与自动运营系统：从游客问题发现、多 AI 真实采样、品牌与竞品证据分析，到内容/网站/信源动作、发布和发布后复测形成可追溯闭环；人主要维护企业真相、差异化能力并对高风险动作做 Yes/No 决策。
+AnswerTravel V2 是面向多个文旅品牌的 GEO 监测与决策平台：监测品牌所关心的游客问题在真实 AI 平台上得到什么回答，分析原始回答、信源和竞品，再决定内容、官网、信源、品牌事实或业务方向，并按同口径复测。所有结论都必须回到真实采集证据；证据不足时可以决定不行动。
 
 ## 用户确认记录
 
 2026-09-13，用户明确回复“以你确定的 V2 为准。继续”。该回复确认产品章程、总体架构、Vibe Coding SOP、核心指标原则、外部仓库使用策略以及 V1/V2 隔离原则。
+
+2026-09-20，用户完成主要界面逐页对齐，确认最终信息架构、真实数据映射和实施前冻结。该确认结束界面 Gate E，但不授权修改运行代码、部署生产、调用模型或触碰客户官网。

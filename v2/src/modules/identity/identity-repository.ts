@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import type pg from "pg";
+import { withTenantTransaction } from "../../platform/database.js";
 
 export const tokenSha256 = (value: string) => createHash("sha256").update(value).digest("hex");
 export const normalizeEmail = (value: string) => value.trim().toLowerCase();
@@ -15,8 +16,15 @@ export class IdentityRepository {
     const row = result.rows[0]; return row ? { id:row.id,email:row.email,passwordHash:row.password_hash } : null;
   }
   async memberships(userId: string): Promise<Membership[]> {
-    const result = await this.pool.query<{tenant_id:string;display_name:string;role:"owner"|"viewer"}>(`select tenant_id,display_name,role from list_user_memberships($1)`, [userId]);
-    return result.rows.map(row => ({ tenantId:row.tenant_id,brandName:row.display_name,role:row.role }));
+    const result = await this.pool.query<{tenant_id:string;role:"owner"|"viewer"}>(`select tenant_id,role from tenant_memberships where user_id=$1 and status='active' order by tenant_id`, [userId]);
+    const memberships = await Promise.all(result.rows.map(async row => {
+      const brand = await withTenantTransaction(this.pool, row.tenant_id, async client => {
+        const tenant = await client.query<{display_name:string}>("select display_name from tenants where id=$1", [row.tenant_id]);
+        return tenant.rows[0]?.display_name ?? null;
+      });
+      return brand ? { tenantId:row.tenant_id, brandName:brand, role:row.role } : null;
+    }));
+    return memberships.filter((membership): membership is Membership => membership !== null);
   }
   async createSession(input:{userId:string;tokenHash:string;selectedTenantId:string|null;expiresAt:Date;now:Date}): Promise<string> {
     const id=randomUUID(); await this.pool.query(`insert into user_sessions(id,user_id,token_sha256,selected_tenant_id,expires_at,last_used_at,created_at) values($1,$2,$3,$4,$5,$6,$6)`,[id,input.userId,input.tokenHash,input.selectedTenantId,input.expiresAt,input.now]); return id;

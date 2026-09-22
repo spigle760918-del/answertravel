@@ -148,3 +148,14 @@
 首次服务器预检暴露两项交付脚本兼容性问题：Windows 生成的内层 `.sha256` 使用 CRLF，Linux `sha256sum -c` 将 `\r` 识别为文件名字符；服务器宿主机没有 Node.js，但运行中的 API 容器具备 Node.js。前者通过仅规范化校验文件行尾解决，后者通过只读借用 API 容器解析候选清单解决；两项均不影响候选源码、压缩包哈希或已构建镜像。后续交付生成器必须固定 LF，并让预检脚本自动回退到容器内 Node.js。
 
 下一阶段仍未获授权：生产数据库/Redis 备份、迁移账本只读预演、执行 `0025/0026`、授予候选运行权限、创建邀请账号、启动候选 API、配置隔离域名和任何流量切换。
+
+## 15. 服务器隔离候选证据
+
+2026-09-22，在完成备份恢复演练、迁移账本审计、新增迁移和最小权限授予后，启动独立候选 API `answertravel-v2-candidate:20260922T061152Z-d3133b0`：
+
+- 候选容器 `answertravel-v2-candidate-api-candidate-1` 为 `running`、健康检查为 `healthy`、重启次数为 0；同时连接 `aliyun_answertravel` 与 `answertravel_proxy`，没有启动 Worker；
+- `GET /health/ready` 返回 200；未登录 `GET /api/v1/auth/session` 返回 401；根页面和带 `Accept: text/html` 的 `/login` 返回 200；无效邀请账号登录返回 401；
+- `/UPSTREAM.md`、`/AGPL-3.0.txt` 和 `/answertravel-v2-frontend-source.tar.gz` 均返回 200；
+- 候选只通过容器内回环地址验收，尚未配置 Nginx、独立域名或公网访问；未创建邀请账号、未发送凭据、未执行任何 DeepSeek 请求、未启动 Worker、未切换流量。
+
+本阶段目标“备份→迁移→最小权限→隔离启动→只读验收”已完成。下一步若要让用户通过浏览器查看候选，需要另行授权创建受审计邀请账号并配置独立 HTTPS 入口；正式流量切换仍需单独确认。

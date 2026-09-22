@@ -57,7 +57,8 @@ try { & tar -czf $archive CANDIDATE-MANIFEST.json package.json package-lock.json
 finally { Pop-Location }
 $archiveHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $archive).Hash.ToLowerInvariant()
 $checksumPath = "$archive.sha256"
-"$archiveHash  $([System.IO.Path]::GetFileName($archive))" | Set-Content -LiteralPath $checksumPath -Encoding ascii
+$checksumLine = "$archiveHash  $([System.IO.Path]::GetFileName($archive))`n"
+[System.IO.File]::WriteAllText($checksumPath, $checksumLine, [System.Text.ASCIIEncoding]::new())
 
 Remove-Item -LiteralPath $temporaryRoot -Recurse -Force
 Write-Output ([ordered]@{ event="isolated_candidate.created"; version=$version; archive=$archive; sha256=$archiveHash; workingTreeDirty=$dirty; productionTrafficSwitchAuthorized=$false } | ConvertTo-Json -Compress)

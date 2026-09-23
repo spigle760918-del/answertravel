@@ -170,3 +170,18 @@
 - 未执行：生产流量切换、现网 API 替换、Worker 启动、DeepSeek 调用、客户官网修改、公开注册或额外账号创建。
 
 隔离预览 Gate E 通过。正式上线仍需单独确认“切换 `geo.21y.com:443` 到候选”这一高风险动作；在此之前候选和现网并行保留。
+
+## 17. 正式 HTTPS 流量切换证据
+
+2026-09-23，用户明确授权将 `geo.21y.com:443` 正式流量切换到候选版本。切换前已将候选 `PRODUCT_PUBLIC_ORIGIN` 更新为 `https://geo.21y.com` 并强制重建候选 API；随后备份现有 Nginx 代理片段，仅将代理目标从 `172.30.0.10:4288` 改为 `172.30.0.11:4288`，通过 `nginx -t` 后重载。
+
+切换后服务器验收结果：
+
+- `PUBLIC_ROOT=200`；
+- `PUBLIC_READY=200`；
+- `PUBLIC_SESSION=401`（未登录保护正常）；
+- 候选 API `running`、`healthy`、`RestartCount=0`；
+- 原 `aliyun-api-1` 仍为 `running`、`RestartCount=0`，未被重建或删除；
+- Worker 未启动新实例，DeepSeek 调用、客户官网修改和数据采样均未执行。
+
+正式 443 流量切换 Gate E 通过。切换前 Nginx 配置备份为服务器上的 `*.before-candidate-switch-*` 文件；如后续业务验收失败，只回滚该代理片段并重载 Nginx，不删除数据库迁移或数据卷。
